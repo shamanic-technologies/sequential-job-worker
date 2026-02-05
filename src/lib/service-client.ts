@@ -126,20 +126,6 @@ export const campaignService = {
   },
 };
 
-export const apolloService = {
-  url: process.env.APOLLO_SERVICE_URL || "http://localhost:3004",
-  apiKey: process.env.APOLLO_SERVICE_API_KEY,
-  
-  async search(clerkOrgId: string, data: unknown) {
-    return callService(this.url, "/search", {
-      method: "POST",
-      body: data,
-      apiKey: this.apiKey,
-      clerkOrgId,
-    });
-  },
-};
-
 export const emailGenerationService = {
   url: process.env.EMAILGENERATION_SERVICE_URL || "http://localhost:3005",
   apiKey: process.env.EMAILGENERATION_SERVICE_API_KEY,
@@ -228,7 +214,7 @@ export const brandService = {
   },
 };
 
-// Lead Service - dedup + buffer service
+// Lead Service - dedup + buffer service + Apollo search
 export const leadService = {
   url: process.env.LEAD_SERVICE_URL || "http://localhost:3006",
   apiKey: process.env.LEAD_SERVICE_API_KEY,
@@ -238,19 +224,31 @@ export const leadService = {
     return { "X-App-Id": this.appId, "X-Org-Id": clerkOrgId };
   },
 
-  async push(clerkOrgId: string, namespace: string, parentRunId: string, leads: Array<{ email: string; externalId?: string; data?: unknown }>) {
-    return callService(this.url, "/buffer/push", {
+  /**
+   * Pull next lead from buffer. If buffer is empty and searchParams provided,
+   * lead-service will auto-fetch from Apollo internally.
+   */
+  async next(
+    clerkOrgId: string,
+    params: {
+      namespace: string;
+      parentRunId: string;
+      brandId?: string;
+      searchParams?: unknown;
+    }
+  ) {
+    return callService(this.url, "/buffer/next", {
       method: "POST",
-      body: { namespace, parentRunId, leads },
+      body: params,
       apiKey: this.apiKey,
       extraHeaders: this.headers(clerkOrgId),
     });
   },
 
-  async next(clerkOrgId: string, namespace: string, parentRunId: string) {
-    return callService(this.url, "/buffer/next", {
+  async push(clerkOrgId: string, namespace: string, parentRunId: string, leads: Array<{ email: string; externalId?: string; data?: unknown }>) {
+    return callService(this.url, "/buffer/push", {
       method: "POST",
-      body: { namespace, parentRunId },
+      body: { namespace, parentRunId, leads },
       apiKey: this.apiKey,
       extraHeaders: this.headers(clerkOrgId),
     });

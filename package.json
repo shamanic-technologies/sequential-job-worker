@@ -1,0 +1,45 @@
+{
+  "name": "@shamanic-technologies/sequential-job-worker",
+  "version": "0.1.0",
+  "description": "A sequential job pipeline worker built on BullMQ and Redis. Processes chained jobs with rate limiting, budget enforcement, and run tracking.",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:unit": "vitest run tests/unit"
+  },
+  "keywords": [
+    "bullmq",
+    "redis",
+    "job-queue",
+    "worker",
+    "pipeline",
+    "sequential-jobs",
+    "task-runner"
+  ],
+  "author": "Shamanic Technologies",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/shamanic-technologies/sequential-job-worker.git"
+  },
+  "dependencies": {
+    "@sentry/node": "^8.0.0",
+    "bullmq": "^5.0.0",
+    "ioredis": "^5.3.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "tsx": "^4.0.0",
+    "typescript": "^5.3.0",
+    "vitest": "^4.0.18"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

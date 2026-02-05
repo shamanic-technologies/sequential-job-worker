@@ -36,6 +36,13 @@ interface BudgetCheckResult {
 // Runs older than this are considered stale and will be marked failed
 const STALE_RUN_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
 
+// Shutdown flag to stop polling during graceful shutdown
+let isShuttingDown = false;
+
+export function stopCampaignScheduler() {
+  isShuttingDown = true;
+}
+
 /**
  * Campaign Scheduler
  * Polls for ongoing campaigns and queues them if budget allows.
@@ -43,8 +50,12 @@ const STALE_RUN_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
  */
 export function startCampaignScheduler(intervalMs: number = 30000): NodeJS.Timeout {
   console.log(`[scheduler] Starting campaign scheduler (interval: ${intervalMs}ms)`);
+  isShuttingDown = false;
 
   async function pollCampaigns() {
+    if (isShuttingDown) {
+      return;
+    }
     try {
       const result = await campaignService.listCampaigns() as { campaigns: Campaign[] };
       const campaigns = result.campaigns || [];

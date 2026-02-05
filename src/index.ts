@@ -5,7 +5,7 @@ import { startBrandProfileWorker } from "./workers/brand-profile.js";
 import { startLeadSearchWorker } from "./workers/lead-search.js";
 import { startEmailGenerateWorker } from "./workers/email-generate.js";
 import { startEmailSendWorker } from "./workers/email-send.js";
-import { startCampaignScheduler } from "./schedulers/campaign-scheduler.js";
+import { startCampaignScheduler, stopCampaignScheduler } from "./schedulers/campaign-scheduler.js";
 import { closeRedis } from "./lib/redis.js";
 
 console.log("=== MCP Factory Worker Starting ===");
@@ -42,22 +42,24 @@ try {
 // Graceful shutdown
 process.on("SIGTERM", async () => {
   console.log("Shutting down workers...");
-  
+
+  stopCampaignScheduler();
   clearInterval(schedulerInterval);
   await Promise.all(workers.map((w) => w.close()));
   await closeRedis();
-  
+
   console.log("Workers shut down");
   process.exit(0);
 });
 
 process.on("SIGINT", async () => {
   console.log("Shutting down workers...");
-  
+
+  stopCampaignScheduler();
   clearInterval(schedulerInterval);
   await Promise.all(workers.map((w) => w.close()));
   await closeRedis();
-  
+
   console.log("Workers shut down");
   process.exit(0);
 });

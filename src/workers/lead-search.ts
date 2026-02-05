@@ -177,8 +177,12 @@ export function startLeadSearchWorker(): Worker {
     console.log(`[lead-search] Job ${job.id} completed`);
   });
 
-  worker.on("failed", (job, err) => {
+  worker.on("failed", async (job, err) => {
     console.error(`[lead-search] Job ${job?.id} failed:`, err);
+    if (job) {
+      const { runId } = job.data;
+      await finalizeRun(runId, { total: 0, done: 0, failed: 0 });
+    }
   });
 
   return worker;

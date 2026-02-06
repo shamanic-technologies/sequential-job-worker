@@ -44,13 +44,14 @@ export function startBrandUpsertWorker(): Worker {
       try {
         // 1. Create a run in runs-service
         const runsOrgId = await runsService.ensureOrganization(clerkOrgId);
+        console.log(`[Sequential Job Worker][brand-upsert] createRun: clerkOrgId=${clerkOrgId} runsOrgId=${runsOrgId} taskName=${campaignId}`);
         const run = await runsService.createRun({
           organizationId: runsOrgId,
           serviceName: "campaign-service",
           taskName: campaignId,
         });
         const runId = run.id;
-        console.log(`[Sequential Job Worker][brand-upsert] Created run ${runId} in runs-service`);
+        console.log(`[Sequential Job Worker][brand-upsert] Created run ${runId} in runs-service (status=${run.status})`);
         
         // 2. Get campaign details including brandUrl
         const campaignResult = await campaignService.getCampaign(campaignId, clerkOrgId) as { campaign: CampaignDetails };

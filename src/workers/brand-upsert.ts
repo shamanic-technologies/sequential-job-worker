@@ -69,15 +69,17 @@ export function startBrandUpsertWorker(): Worker {
         const brandDomain = new URL(brandUrl).hostname.replace(/^www\./, '');
         console.log(`[Sequential Job Worker][brand-upsert] Brand: ${brandDomain} (${brandUrl})`);
         
-        // 3. Build search params
-        const searchParams = {
-          personTitles: campaign.personTitles,
-          organizationLocations: campaign.organizationLocations,
-          qOrganizationKeywordTags: campaign.qOrganizationKeywordTags,
-          organizationNumEmployeesRanges: campaign.organizationNumEmployeesRanges,
-          qOrganizationIndustryTagIds: campaign.qOrganizationIndustryTagIds,
-          qKeywords: campaign.qKeywords,
-        };
+        // 3. Build search params (strip nulls so lead-service doesn't choke on .map(null))
+        const searchParams = Object.fromEntries(
+          Object.entries({
+            personTitles: campaign.personTitles,
+            organizationLocations: campaign.organizationLocations,
+            qOrganizationKeywordTags: campaign.qOrganizationKeywordTags,
+            organizationNumEmployeesRanges: campaign.organizationNumEmployeesRanges,
+            qOrganizationIndustryTagIds: campaign.qOrganizationIndustryTagIds,
+            qKeywords: campaign.qKeywords,
+          }).filter(([, v]) => v != null)
+        );
         
         // 4. Queue brand-profile job
         // brand-service will upsert the brand when fetching/creating sales profile

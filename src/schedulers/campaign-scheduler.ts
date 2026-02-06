@@ -36,6 +36,9 @@ interface BudgetCheckResult {
 // Runs older than this are considered stale and will be marked failed
 const STALE_RUN_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
 
+// If the last N consecutive runs all failed, pause the campaign
+const MAX_CONSECUTIVE_FAILURES = 3;
+
 // Shutdown flag to stop polling during graceful shutdown
 let isShuttingDown = false;
 
@@ -175,7 +178,19 @@ async function shouldRunCampaign(campaign: Campaign): Promise<ShouldRunResult> {
 
           shouldRun = false;
         } else {
-          shouldRun = true;
+          // Check for consecutive failures (e.g. lead buffer exhausted)
+          const consecutiveFailures = countConsecutiveFailures(runs);
+          if (consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
+            console.log(`[scheduler] Campaign ${campaign.id}: ${consecutiveFailures} consecutive failed runs, stopping campaign`);
+            try {
+              await campaignService.updateCampaign(campaign.id, campaign.clerkOrgId, { status: "stopped" } as any);
+            } catch (err) {
+              console.error(`[scheduler] Failed to auto-stop campaign ${campaign.id} (consecutive failures):`, err);
+            }
+            shouldRun = false;
+          } else {
+            shouldRun = true;
+          }
         }
       }
     }
@@ -186,6 +201,23 @@ async function shouldRunCampaign(campaign: Campaign): Promise<ShouldRunResult> {
     console.error(`[scheduler] Error checking runs for ${campaign.id}, failing closed:`, error);
     return { shouldRun: false, hasRunningRun: false };
   }
+}
+
+/**
+ * Count how many of the most recent completed runs failed consecutively.
+ * Runs are assumed newest-first from the API.
+ */
+function countConsecutiveFailures(runs: Run[]): number {
+  let count = 0;
+  for (const run of runs) {
+    if (run.status === "running") continue; // skip in-progress
+    if (run.status === "failed") {
+      count++;
+    } else {
+      break; // first non-failed completed run stops the streak
+    }
+  }
+  return count;
 }
 
 export function getBudgetWindows(campaign: Campaign): BudgetWindow[] {

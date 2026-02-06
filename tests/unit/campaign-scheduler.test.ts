@@ -14,6 +14,9 @@ vi.mock("../../src/lib/service-client.js", () => ({
     updateRun: vi.fn(),
     getRunsBatch: vi.fn(),
   },
+  leadService: {
+    getStats: vi.fn(),
+  },
 }));
 
 // Mock the queues
@@ -179,6 +182,108 @@ describe("Campaign Scheduler Logic", () => {
         campaignId: "camp-123",
         clerkOrgId: "org_test",
       });
+    });
+  });
+
+  describe("Consecutive failure detection", () => {
+    it("should pause campaign after 3 consecutive failed runs", async () => {
+      const campaigns = [
+        {
+          id: "camp-failing",
+          orgId: "org-uuid",
+          clerkOrgId: "org_clerk_fail",
+          status: "ongoing",
+          maxBudgetDailyUsd: "10.00",
+          createdAt: new Date().toISOString(),
+        },
+      ];
+
+      // 3 consecutive failed runs (newest first)
+      const failedRuns = [
+        { id: "run-3", status: "failed", createdAt: new Date().toISOString() },
+        { id: "run-2", status: "failed", createdAt: new Date().toISOString() },
+        { id: "run-1", status: "failed", createdAt: new Date().toISOString() },
+      ];
+
+      vi.mocked(campaignService.listCampaigns).mockResolvedValue({ campaigns });
+      vi.mocked(runsService.listRuns).mockResolvedValue({ runs: failedRuns, limit: 200, offset: 0 });
+      vi.mocked(runsService.getRunsBatch).mockResolvedValue(
+        new Map(failedRuns.map(r => [r.id, {
+          ...r,
+          totalCostInUsdCents: "0",
+          ownCostInUsdCents: "0",
+          childrenCostInUsdCents: "0",
+          costs: [],
+          parentRunId: null,
+          organizationId: "org-id",
+          userId: null,
+          serviceName: "campaign-service",
+          taskName: "camp-failing",
+          startedAt: r.createdAt,
+          completedAt: r.createdAt,
+          updatedAt: r.createdAt,
+        }]))
+      );
+
+      const interval = startCampaignScheduler(100000);
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      clearInterval(interval);
+
+      // Should NOT queue a new run
+      expect(mockQueueAdd).not.toHaveBeenCalled();
+      // Should stop the campaign
+      expect(campaignService.updateCampaign).toHaveBeenCalledWith(
+        "camp-failing",
+        "org_clerk_fail",
+        expect.objectContaining({ status: "stopped" })
+      );
+    });
+
+    it("should still queue campaign if only 2 consecutive failures", async () => {
+      const campaigns = [
+        {
+          id: "camp-recovering",
+          orgId: "org-uuid",
+          clerkOrgId: "org_clerk_recover",
+          status: "ongoing",
+          maxBudgetDailyUsd: "10.00",
+          createdAt: new Date().toISOString(),
+        },
+      ];
+
+      // 2 failed then 1 completed (newest first)
+      const runs = [
+        { id: "run-3", status: "failed", createdAt: new Date().toISOString() },
+        { id: "run-2", status: "failed", createdAt: new Date().toISOString() },
+        { id: "run-1", status: "completed", createdAt: new Date().toISOString() },
+      ];
+
+      vi.mocked(campaignService.listCampaigns).mockResolvedValue({ campaigns });
+      vi.mocked(runsService.listRuns).mockResolvedValue({ runs, limit: 200, offset: 0 });
+      vi.mocked(runsService.getRunsBatch).mockResolvedValue(
+        new Map(runs.map(r => [r.id, {
+          ...r,
+          totalCostInUsdCents: "0",
+          ownCostInUsdCents: "0",
+          childrenCostInUsdCents: "0",
+          costs: [],
+          parentRunId: null,
+          organizationId: "org-id",
+          userId: null,
+          serviceName: "campaign-service",
+          taskName: "camp-recovering",
+          startedAt: r.createdAt,
+          completedAt: r.createdAt,
+          updatedAt: r.createdAt,
+        }]))
+      );
+
+      const interval = startCampaignScheduler(100000);
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      clearInterval(interval);
+
+      // Should queue since only 2 consecutive failures < threshold of 3
+      expect(mockQueueAdd).toHaveBeenCalledTimes(1);
     });
   });
 

@@ -44,7 +44,7 @@ export function startBrandProfileWorker(): Worker {
       
       // Extract domain from brandUrl for logging and fallback
       const brandDomain = new URL(brandUrl).hostname.replace(/^www\./, '');
-      console.log(`[brand-profile] Fetching profile for ${brandDomain} (${brandUrl})`);
+      console.log(`[Sequential Job Worker][brand-profile] Fetching profile for ${brandDomain} (${brandUrl})`);
       
       try {
         // 1. Get sales profile from brand-service
@@ -75,7 +75,7 @@ export function startBrandProfileWorker(): Worker {
               additionalContext: p.additionalContext || undefined,
             };
             clientData.brandUrl = brandUrl;
-            console.log(`[brand-profile] Got profile: ${clientData.companyName} (cached: ${profileResult.cached})`);
+            console.log(`[Sequential Job Worker][brand-profile] Got profile: ${clientData.companyName} (cached: ${profileResult.cached})`);
 
             // Update campaign with brandId from brand-service
             if (profileResult.brandId) {
@@ -84,17 +84,17 @@ export function startBrandProfileWorker(): Worker {
                 await campaignService.updateCampaign(campaignId, clerkOrgId, {
                   brandId,
                 });
-                console.log(`[brand-profile] Updated campaign ${campaignId} with brandId: ${brandId}`);
+                console.log(`[Sequential Job Worker][brand-profile] Updated campaign ${campaignId} with brandId: ${brandId}`);
               } catch (updateErr) {
                 // Non-fatal - log and continue
-                console.error(`[brand-profile] Failed to update campaign brandId:`, updateErr);
+                console.error(`[Sequential Job Worker][brand-profile] Failed to update campaign brandId:`, updateErr);
               }
             }
           }
         } catch (profileError) {
-          console.error(`[brand-profile] Failed to get profile:`, profileError);
+          console.error(`[Sequential Job Worker][brand-profile] Failed to get profile:`, profileError);
           // Continue with domain as company name rather than failing
-          console.log(`[brand-profile] Using domain as fallback: ${brandDomain}`);
+          console.log(`[Sequential Job Worker][brand-profile] Using domain as fallback: ${brandDomain}`);
         }
         
         // 2. Queue lead-search job
@@ -111,12 +111,12 @@ export function startBrandProfileWorker(): Worker {
           } as LeadSearchJobData
         );
         
-        console.log(`[brand-profile] Queued lead-search for run ${runId}`);
-        console.log(`[brand-profile] Search params:`, JSON.stringify(searchParams));
+        console.log(`[Sequential Job Worker][brand-profile] Queued lead-search for run ${runId}`);
+        console.log(`[Sequential Job Worker][brand-profile] Search params:`, JSON.stringify(searchParams));
         
         return { runId, brandUrl, hasProfile: !!clientData.companyName };
       } catch (error) {
-        console.error(`[brand-profile] Error:`, error);
+        console.error(`[Sequential Job Worker][brand-profile] Error:`, error);
         throw error;
       }
     },
@@ -127,18 +127,18 @@ export function startBrandProfileWorker(): Worker {
   );
   
   worker.on("ready", () => {
-    console.log(`[brand-profile] Worker ready (concurrency=5)`);
+    console.log(`[Sequential Job Worker][brand-profile] Worker ready (concurrency=5)`);
   });
   
   worker.on("completed", (job) => {
-    console.log(`[brand-profile] Job ${job.id} completed`);
+    console.log(`[Sequential Job Worker][brand-profile] Job ${job.id} completed`);
   });
   
   worker.on("failed", (job, err) => {
-    console.error(`[brand-profile] Job ${job?.id} failed:`, err);
+    console.error(`[Sequential Job Worker][brand-profile] Job ${job?.id} failed:`, err);
   });
   
-  console.log(`[brand-profile] Worker started on queue: ${QUEUE_NAMES.BRAND_PROFILE}`);
+  console.log(`[Sequential Job Worker][brand-profile] Worker started on queue: ${QUEUE_NAMES.BRAND_PROFILE}`);
   
   return worker;
 }

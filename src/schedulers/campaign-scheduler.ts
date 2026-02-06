@@ -52,7 +52,7 @@ export function stopCampaignScheduler() {
  * Campaigns run continuously (back-to-back) — budget is the only throttle.
  */
 export function startCampaignScheduler(intervalMs: number = 30000): NodeJS.Timeout {
-  console.log(`[scheduler] Starting campaign scheduler (interval: ${intervalMs}ms)`);
+  console.log(`[Sequential Job Worker][scheduler] Starting campaign scheduler (interval: ${intervalMs}ms)`);
   isShuttingDown = false;
 
   async function pollCampaigns() {
@@ -64,20 +64,20 @@ export function startCampaignScheduler(intervalMs: number = 30000): NodeJS.Timeo
       const campaigns = result.campaigns || [];
 
       const ongoingCampaigns = campaigns.filter(c => c.status === "ongoing");
-      console.log(`[scheduler] Found ${ongoingCampaigns.length} ongoing campaigns`);
+      console.log(`[Sequential Job Worker][scheduler] Found ${ongoingCampaigns.length} ongoing campaigns`);
 
       for (const campaign of ongoingCampaigns) {
         const { shouldRun, hasRunningRun } = await shouldRunCampaign(campaign);
 
-        console.log(`[scheduler] Campaign ${campaign.id}: shouldRun=${shouldRun}, hasRunningRun=${hasRunningRun}`);
+        console.log(`[Sequential Job Worker][scheduler] Campaign ${campaign.id}: shouldRun=${shouldRun}, hasRunningRun=${hasRunningRun}`);
 
         if (hasRunningRun) {
-          console.log(`[scheduler] Campaign ${campaign.id}: has running run, skipping`);
+          console.log(`[Sequential Job Worker][scheduler] Campaign ${campaign.id}: has running run, skipping`);
           continue;
         }
 
         if (shouldRun) {
-          console.log(`[scheduler] Queueing campaign ${campaign.id} for org ${campaign.clerkOrgId}`);
+          console.log(`[Sequential Job Worker][scheduler] Queueing campaign ${campaign.id} for org ${campaign.clerkOrgId}`);
 
           const queues = getQueues();
           await queues[QUEUE_NAMES.BRAND_UPSERT].add(
@@ -90,7 +90,7 @@ export function startCampaignScheduler(intervalMs: number = 30000): NodeJS.Timeo
         }
       }
     } catch (error) {
-      console.error("[scheduler] Error polling campaigns:", error);
+      console.error("[Sequential Job Worker][scheduler] Error polling campaigns:", error);
     }
   }
 
@@ -128,11 +128,11 @@ async function shouldRunCampaign(campaign: Campaign): Promise<ShouldRunResult> {
     for (const run of runs) {
       if (run.status === "running" &&
           now - new Date(run.createdAt).getTime() > STALE_RUN_TIMEOUT_MS) {
-        console.log(`[scheduler] Run ${run.id} is stale (>${STALE_RUN_TIMEOUT_MS / 60000} min), marking as failed`);
+        console.log(`[Sequential Job Worker][scheduler] Run ${run.id} is stale (>${STALE_RUN_TIMEOUT_MS / 60000} min), marking as failed`);
         try {
           await runsService.updateRun(run.id, "failed");
         } catch (err) {
-          console.error(`[scheduler] Failed to mark stale run ${run.id} as failed:`, err);
+          console.error(`[Sequential Job Worker][scheduler] Failed to mark stale run ${run.id} as failed:`, err);
         }
       }
     }
@@ -142,22 +142,22 @@ async function shouldRunCampaign(campaign: Campaign): Promise<ShouldRunResult> {
 
     const hasRunningRun = runs.some(r => r.status === "running");
 
-    console.log(`[scheduler] Campaign ${campaign.id} has ${runs.length} runs (${runs.filter(r => r.status === "running").length} running)`);
+    console.log(`[Sequential Job Worker][scheduler] Campaign ${campaign.id} has ${runs.length} runs (${runs.filter(r => r.status === "running").length} running)`);
 
     // Budget + volume are the gates — if no running run, check both
     let shouldRun = false;
     if (!hasRunningRun) {
       const budgetResult = await isBudgetExceeded(campaign, runs);
       if (budgetResult.exceeded) {
-        console.log(`[scheduler] Campaign ${campaign.id}: ${budgetResult.which} budget exceeded ($${budgetResult.spendUsd?.toFixed(2)} >= $${budgetResult.limitUsd?.toFixed(2)})`);
+        console.log(`[Sequential Job Worker][scheduler] Campaign ${campaign.id}: ${budgetResult.which} budget exceeded ($${budgetResult.spendUsd?.toFixed(2)} >= $${budgetResult.limitUsd?.toFixed(2)})`);
 
         // Auto-stop campaign if total budget is exhausted
         if (budgetResult.which === "total") {
-          console.log(`[scheduler] Campaign ${campaign.id}: total budget exhausted, stopping campaign`);
+          console.log(`[Sequential Job Worker][scheduler] Campaign ${campaign.id}: total budget exhausted, stopping campaign`);
           try {
             await campaignService.updateCampaign(campaign.id, campaign.clerkOrgId, { status: "stopped" } as any);
           } catch (err) {
-            console.error(`[scheduler] Failed to auto-stop campaign ${campaign.id}:`, err);
+            console.error(`[Sequential Job Worker][scheduler] Failed to auto-stop campaign ${campaign.id}:`, err);
           }
         }
 
@@ -166,14 +166,14 @@ async function shouldRunCampaign(campaign: Campaign): Promise<ShouldRunResult> {
         // Check volume limit
         const volumeResult = await isVolumeExceeded(campaign);
         if (volumeResult.exceeded) {
-          console.log(`[scheduler] Campaign ${campaign.id}: volume exceeded (${volumeResult.totalServed} >= ${volumeResult.maxLeads})`);
+          console.log(`[Sequential Job Worker][scheduler] Campaign ${campaign.id}: volume exceeded (${volumeResult.totalServed} >= ${volumeResult.maxLeads})`);
 
           // Auto-stop campaign when volume cap reached
-          console.log(`[scheduler] Campaign ${campaign.id}: max leads reached, stopping campaign`);
+          console.log(`[Sequential Job Worker][scheduler] Campaign ${campaign.id}: max leads reached, stopping campaign`);
           try {
             await campaignService.updateCampaign(campaign.id, campaign.clerkOrgId, { status: "stopped" } as any);
           } catch (err) {
-            console.error(`[scheduler] Failed to auto-stop campaign ${campaign.id}:`, err);
+            console.error(`[Sequential Job Worker][scheduler] Failed to auto-stop campaign ${campaign.id}:`, err);
           }
 
           shouldRun = false;
@@ -181,11 +181,11 @@ async function shouldRunCampaign(campaign: Campaign): Promise<ShouldRunResult> {
           // Check for consecutive failures (e.g. lead buffer exhausted)
           const consecutiveFailures = countConsecutiveFailures(runs);
           if (consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
-            console.log(`[scheduler] Campaign ${campaign.id}: ${consecutiveFailures} consecutive failed runs, stopping campaign`);
+            console.log(`[Sequential Job Worker][scheduler] Campaign ${campaign.id}: ${consecutiveFailures} consecutive failed runs, stopping campaign`);
             try {
               await campaignService.updateCampaign(campaign.id, campaign.clerkOrgId, { status: "stopped" } as any);
             } catch (err) {
-              console.error(`[scheduler] Failed to auto-stop campaign ${campaign.id} (consecutive failures):`, err);
+              console.error(`[Sequential Job Worker][scheduler] Failed to auto-stop campaign ${campaign.id} (consecutive failures):`, err);
             }
             shouldRun = false;
           } else {
@@ -198,7 +198,7 @@ async function shouldRunCampaign(campaign: Campaign): Promise<ShouldRunResult> {
     return { shouldRun, hasRunningRun };
   } catch (error) {
     // Fail closed — if we can't determine budget, don't run
-    console.error(`[scheduler] Error checking runs for ${campaign.id}, failing closed:`, error);
+    console.error(`[Sequential Job Worker][scheduler] Error checking runs for ${campaign.id}, failing closed:`, error);
     return { shouldRun: false, hasRunningRun: false };
   }
 }
@@ -264,7 +264,7 @@ export async function isBudgetExceeded(campaign: Campaign, allRuns: Run[]): Prom
 
   if (windows.length === 0) {
     // No budget fields set — fail closed (shouldn't happen since creation requires at least one)
-    console.warn(`[scheduler] Campaign ${campaign.id}: no budget fields set, blocking run`);
+    console.warn(`[Sequential Job Worker][scheduler] Campaign ${campaign.id}: no budget fields set, blocking run`);
     return { exceeded: true, which: "total", spendUsd: 0, limitUsd: 0 };
   }
 
@@ -302,7 +302,7 @@ export async function isBudgetExceeded(campaign: Campaign, allRuns: Run[]): Prom
     }
 
     const spendUsd = spendCents / 100;
-    console.log(`[scheduler] Campaign ${campaign.id} ${window.label} spend: $${spendUsd.toFixed(2)} / $${window.limitUsd.toFixed(2)}`);
+    console.log(`[Sequential Job Worker][scheduler] Campaign ${campaign.id} ${window.label} spend: $${spendUsd.toFixed(2)} / $${window.limitUsd.toFixed(2)}`);
 
     if (spendUsd >= window.limitUsd) {
       return { exceeded: true, which: window.label, spendUsd, limitUsd: window.limitUsd };
@@ -327,7 +327,7 @@ export async function isVolumeExceeded(campaign: Campaign): Promise<VolumeCheckR
     const stats = await leadService.getStats(campaign.clerkOrgId, campaign.brandId);
     const totalServed = stats.totalServed;
 
-    console.log(`[scheduler] Campaign ${campaign.id} volume: ${totalServed} / ${campaign.maxLeads}`);
+    console.log(`[Sequential Job Worker][scheduler] Campaign ${campaign.id} volume: ${totalServed} / ${campaign.maxLeads}`);
 
     if (totalServed >= campaign.maxLeads) {
       return { exceeded: true, totalServed, maxLeads: campaign.maxLeads };
@@ -336,7 +336,7 @@ export async function isVolumeExceeded(campaign: Campaign): Promise<VolumeCheckR
     return { exceeded: false, totalServed, maxLeads: campaign.maxLeads };
   } catch (error) {
     // Fail closed — if we can't check volume, don't run
-    console.error(`[scheduler] Failed to check volume for campaign ${campaign.id}, failing closed:`, error);
+    console.error(`[Sequential Job Worker][scheduler] Failed to check volume for campaign ${campaign.id}, failing closed:`, error);
     return { exceeded: true, totalServed: 0, maxLeads: campaign.maxLeads };
   }
 }

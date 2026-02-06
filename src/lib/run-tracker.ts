@@ -23,7 +23,7 @@ export async function initRunTracking(runId: string, totalJobs: number): Promise
   await redis.set(`${prefix}${DONE_KEY}`, 0, "EX", TTL_SECONDS);
   await redis.set(`${prefix}${FAILED_KEY}`, 0, "EX", TTL_SECONDS);
   
-  console.log(`[run-tracker] Initialized run ${runId} with ${totalJobs} expected jobs`);
+  console.log(`[Sequential Job Worker][run-tracker] Initialized run ${runId} with ${totalJobs} expected jobs`);
 }
 
 /**
@@ -48,7 +48,7 @@ export async function markJobDone(
   
   const isLast = done >= total && total > 0;
   
-  console.log(`[run-tracker] Run ${runId}: ${done}/${total} done (${failed} failed), isLast=${isLast}`);
+  console.log(`[Sequential Job Worker][run-tracker] Run ${runId}: ${done}/${total} done (${failed} failed), isLast=${isLast}`);
   
   return { isLast, total, done, failed };
 }
@@ -66,7 +66,7 @@ export async function finalizeRun(
   // Determine final status
   const status = stats.failed === stats.total ? "failed" : "completed";
   
-  console.log(`[run-tracker] Finalizing run ${runId} with status=${status} (${stats.done - stats.failed} success, ${stats.failed} failed)`);
+  console.log(`[Sequential Job Worker][run-tracker] Finalizing run ${runId} with status=${status} (${stats.done - stats.failed} success, ${stats.failed} failed)`);
   
   try {
     await runsService.updateRun(runId, status);
@@ -76,8 +76,8 @@ export async function finalizeRun(
     await redis.del(`${prefix}${DONE_KEY}`);
     await redis.del(`${prefix}${FAILED_KEY}`);
     
-    console.log(`[run-tracker] Run ${runId} finalized successfully`);
+    console.log(`[Sequential Job Worker][run-tracker] Run ${runId} finalized successfully`);
   } catch (error) {
-    console.error(`[run-tracker] Failed to finalize run ${runId}:`, error);
+    console.error(`[Sequential Job Worker][run-tracker] Failed to finalize run ${runId}:`, error);
   }
 }

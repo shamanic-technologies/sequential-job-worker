@@ -7,7 +7,8 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "tsc",
+    "build": "tsc && npm run generate:openapi",
+    "generate:openapi": "tsx scripts/generate-openapi.ts",
     "start": "node dist/index.js",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -31,7 +32,8 @@
   "dependencies": {
     "@sentry/node": "^8.0.0",
     "bullmq": "^5.0.0",
-    "ioredis": "^5.3.0"
+    "ioredis": "^5.3.0",
+    "swagger-autogen": "^2.23.7"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",

@@ -42,6 +42,7 @@ export interface BrandProfileJobData {
   runId: string;
   clerkOrgId: string;
   brandUrl: string;
+  maxLeads?: number | null;
   searchParams: {
     personTitles?: string[];
     organizationLocations?: string[];
@@ -57,6 +58,7 @@ export interface LeadSearchJobData {
   clerkOrgId: string;
   campaignId: string;
   brandId: string;
+  maxLeads?: number | null;
   searchParams: {
     personTitles?: string[];
     organizationLocations?: string[];
@@ -101,6 +103,7 @@ export interface CompanyScrapeJobData {
 export interface EmailGenerateJobData {
   runId: string;
   clerkOrgId: string;
+  campaignId: string;
   apolloEnrichmentId: string;
   leadData: {
     firstName: string;

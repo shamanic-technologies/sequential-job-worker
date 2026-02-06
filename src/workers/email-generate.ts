@@ -3,6 +3,7 @@ import { getRedis } from "../lib/redis.js";
 import { getQueues, QUEUE_NAMES, EmailGenerateJobData, EmailSendJobData } from "../queues/index.js";
 import { emailGenerationService } from "../lib/service-client.js";
 import { markJobDone, finalizeRun } from "../lib/run-tracker.js";
+import { retriggerCampaignIfNeeded } from "../schedulers/campaign-scheduler.js";
 
 interface GenerationResult {
   id: string;
@@ -99,19 +100,22 @@ export function startEmailGenerateWorker(): Worker {
     
     if (result.isLast) {
       await finalizeRun(runId, result);
+      const { campaignId, clerkOrgId } = job.data;
+      await retriggerCampaignIfNeeded(campaignId, clerkOrgId);
     }
   });
-  
+
   worker.on("failed", async (job, err) => {
     console.error(`[Sequential Job Worker][email-generate] Job ${job?.id} failed:`, err);
-    
+
     if (job) {
       // Track failure and check if this was the last job
-      const { runId } = job.data;
+      const { runId, campaignId, clerkOrgId } = job.data;
       const result = await markJobDone(runId, false);
-      
+
       if (result.isLast) {
         await finalizeRun(runId, result);
+        await retriggerCampaignIfNeeded(campaignId, clerkOrgId);
       }
     }
   });

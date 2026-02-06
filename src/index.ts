@@ -1,5 +1,9 @@
 // IMPORTANT: Import instrument first to initialize Sentry before anything else
 import "./instrument.js";
+import { createServer } from "http";
+import { readFileSync, existsSync } from "fs";
+import { fileURLToPath } from "url";
+import { dirname, join } from "path";
 import { startBrandUpsertWorker } from "./workers/brand-upsert.js";
 import { startBrandProfileWorker } from "./workers/brand-profile.js";
 import { startLeadSearchWorker } from "./workers/lead-search.js";
@@ -7,6 +11,10 @@ import { startEmailGenerateWorker } from "./workers/email-generate.js";
 import { startEmailSendWorker } from "./workers/email-send.js";
 import { startCampaignScheduler, stopCampaignScheduler } from "./schedulers/campaign-scheduler.js";
 import { closeRedis } from "./lib/redis.js";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const openapiPath = join(__dirname, "..", "openapi.json");
 
 console.log("[Sequential Job Worker] === MCP Factory Worker Starting ===");
 console.log("[Sequential Job Worker] Environment check:");
@@ -34,6 +42,26 @@ try {
     startEmailSendWorker(),     // Step 5: Send emails
   ];
   console.log(`[Sequential Job Worker] === ${workers.length} workers + scheduler ready ===`);
+
+  // Minimal HTTP server to serve /openapi.json
+  const port = parseInt(process.env.PORT || "3000", 10);
+  const server = createServer((req, res) => {
+    if (req.method === "GET" && req.url === "/openapi.json") {
+      if (existsSync(openapiPath)) {
+        res.writeHead(200, { "Content-Type": "application/json" });
+        res.end(readFileSync(openapiPath, "utf-8"));
+      } else {
+        res.writeHead(404, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ error: "OpenAPI spec not generated. Run: npm run generate:openapi" }));
+      }
+    } else {
+      res.writeHead(404, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ error: "Not found" }));
+    }
+  });
+  server.listen(port, () => {
+    console.log(`[Sequential Job Worker] OpenAPI spec available at http://localhost:${port}/openapi.json`);
+  });
 } catch (error) {
   console.error("[Sequential Job Worker] === FATAL: Worker startup failed ===", error);
   process.exit(1);

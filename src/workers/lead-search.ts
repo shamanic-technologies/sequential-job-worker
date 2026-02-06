@@ -10,13 +10,12 @@ interface BufferLead {
   data: Record<string, unknown>;
 }
 
-const MAX_LEADS_PER_RUN = 50;
-
 /**
  * Lead Search Worker
  *
- * Pulls deduplicated leads from lead-service buffer.
- * Lead-service handles Apollo search internally when buffer is empty.
+ * Pulls a single deduplicated lead from lead-service buffer per run.
+ * The scheduler handles back-to-back runs, gated by budget and volume (maxLeads).
+ * One lead per run = granular control over spend and volume.
  */
 export function startLeadSearchWorker(): Worker {
   const connection = getRedis();
@@ -31,19 +30,18 @@ export function startLeadSearchWorker(): Worker {
       console.log(`[Sequential Job Worker][lead-search] Client: ${clientData?.companyName || "(no client data)"}`);
 
       try {
-        // Pull deduplicated leads from buffer
+        // Pull a single deduplicated lead from buffer
         // Lead-service handles Apollo search internally when buffer is empty
-        const leads: BufferLead[] = [];
-        while (leads.length < MAX_LEADS_PER_RUN) {
-          const result = await leadService.next(clerkOrgId, {
-            namespace,
-            parentRunId: runId,
-            campaignId,
-            brandId,
-            searchParams,
-          }) as { found: boolean; lead?: BufferLead };
+        const result = await leadService.next(clerkOrgId, {
+          namespace,
+          parentRunId: runId,
+          campaignId,
+          brandId,
+          searchParams,
+        }) as { found: boolean; lead?: BufferLead };
 
-          if (!result.found || !result.lead) break;
+        const leads: BufferLead[] = [];
+        if (result.found && result.lead) {
           leads.push(result.lead);
         }
 
@@ -58,6 +56,7 @@ export function startLeadSearchWorker(): Worker {
             data: {
               runId,
               clerkOrgId,
+              campaignId,
               apolloEnrichmentId: lead.externalId || "",
               leadData: {
                 firstName: lead.data.firstName as string,

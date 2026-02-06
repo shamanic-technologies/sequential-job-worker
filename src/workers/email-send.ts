@@ -17,11 +17,11 @@ export function startEmailSendWorker(): Worker {
       const { runId, clerkOrgId, emailGenerationId, toEmail, subject, bodyHtml } = job.data;
       
       if (!toEmail) {
-        console.log(`[email-send] Skipping - no email address`);
+        console.log(`[Sequential Job Worker][email-send] Skipping - no email address`);
         return { skipped: true };
       }
       
-      console.log(`[email-send] Sending email to ${toEmail}`);
+      console.log(`[Sequential Job Worker][email-send] Sending email to ${toEmail}`);
       
       try {
         // Get the from address from env (our growth agency email)
@@ -42,11 +42,11 @@ export function startEmailSendWorker(): Worker {
           },
         });
         
-        console.log(`[email-send] Sent email to ${toEmail}`);
+        console.log(`[Sequential Job Worker][email-send] Sent email to ${toEmail}`);
         
         return { sent: true, result };
       } catch (error) {
-        console.error(`[email-send] Error:`, error);
+        console.error(`[Sequential Job Worker][email-send] Error:`, error);
         throw error;
       }
     },
@@ -61,11 +61,11 @@ export function startEmailSendWorker(): Worker {
   );
   
   worker.on("completed", (job) => {
-    console.log(`[email-send] Job ${job.id} completed`);
+    console.log(`[Sequential Job Worker][email-send] Job ${job.id} completed`);
   });
   
   worker.on("failed", (job, err) => {
-    console.error(`[email-send] Job ${job?.id} failed:`, err);
+    console.error(`[Sequential Job Worker][email-send] Job ${job?.id} failed:`, err);
   });
   
   return worker;

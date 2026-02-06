@@ -39,7 +39,7 @@ export function startBrandUpsertWorker(): Worker {
     async (job: Job<BrandUpsertJobData>) => {
       const { campaignId, clerkOrgId } = job.data;
       
-      console.log(`[brand-upsert] Starting for campaign ${campaignId}`);
+      console.log(`[Sequential Job Worker][brand-upsert] Starting for campaign ${campaignId}`);
       
       try {
         // 1. Create a run in runs-service
@@ -50,7 +50,7 @@ export function startBrandUpsertWorker(): Worker {
           taskName: campaignId,
         });
         const runId = run.id;
-        console.log(`[brand-upsert] Created run ${runId} in runs-service`);
+        console.log(`[Sequential Job Worker][brand-upsert] Created run ${runId} in runs-service`);
         
         // 2. Get campaign details including brandUrl
         const campaignResult = await campaignService.getCampaign(campaignId, clerkOrgId) as { campaign: CampaignDetails };
@@ -66,7 +66,7 @@ export function startBrandUpsertWorker(): Worker {
         
         // Extract domain for logging
         const brandDomain = new URL(brandUrl).hostname.replace(/^www\./, '');
-        console.log(`[brand-upsert] Brand: ${brandDomain} (${brandUrl})`);
+        console.log(`[Sequential Job Worker][brand-upsert] Brand: ${brandDomain} (${brandUrl})`);
         
         // 3. Build search params
         const searchParams = {
@@ -92,11 +92,11 @@ export function startBrandUpsertWorker(): Worker {
           } as BrandProfileJobData
         );
         
-        console.log(`[brand-upsert] Queued brand-profile for run ${runId}`);
+        console.log(`[Sequential Job Worker][brand-upsert] Queued brand-profile for run ${runId}`);
 
         return { runId, brandUrl };
       } catch (error) {
-        console.error(`[brand-upsert] Error:`, error);
+        console.error(`[Sequential Job Worker][brand-upsert] Error:`, error);
         throw error;
       }
     },
@@ -107,18 +107,18 @@ export function startBrandUpsertWorker(): Worker {
   );
   
   worker.on("ready", () => {
-    console.log(`[brand-upsert] Worker ready (concurrency=1)`);
+    console.log(`[Sequential Job Worker][brand-upsert] Worker ready (concurrency=1)`);
   });
   
   worker.on("completed", (job) => {
-    console.log(`[brand-upsert] Job ${job.id} completed`);
+    console.log(`[Sequential Job Worker][brand-upsert] Job ${job.id} completed`);
   });
   
   worker.on("failed", (job, err) => {
-    console.error(`[brand-upsert] Job ${job?.id} failed:`, err);
+    console.error(`[Sequential Job Worker][brand-upsert] Job ${job?.id} failed:`, err);
   });
   
-  console.log(`[brand-upsert] Worker started on queue: ${QUEUE_NAMES.BRAND_UPSERT}`);
+  console.log(`[Sequential Job Worker][brand-upsert] Worker started on queue: ${QUEUE_NAMES.BRAND_UPSERT}`);
   
   return worker;
 }

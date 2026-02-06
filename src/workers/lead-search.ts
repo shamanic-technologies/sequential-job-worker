@@ -27,8 +27,8 @@ export function startLeadSearchWorker(): Worker {
       const { runId, clerkOrgId, campaignId, brandId, searchParams, clientData } = job.data;
       const namespace = brandId;
 
-      console.log(`[lead-search] Starting for run ${runId}, campaign ${campaignId}, brand ${brandId}`);
-      console.log(`[lead-search] Client: ${clientData?.companyName || "(no client data)"}`);
+      console.log(`[Sequential Job Worker][lead-search] Starting for run ${runId}, campaign ${campaignId}, brand ${brandId}`);
+      console.log(`[Sequential Job Worker][lead-search] Client: ${clientData?.companyName || "(no client data)"}`);
 
       try {
         // Pull deduplicated leads from buffer
@@ -46,7 +46,7 @@ export function startLeadSearchWorker(): Worker {
           leads.push(result.lead);
         }
 
-        console.log(`[lead-search] Pulled ${leads.length} leads from buffer`);
+        console.log(`[Sequential Job Worker][lead-search] Pulled ${leads.length} leads from buffer`);
 
         // Queue email generation for each lead
         const queues = getQueues();
@@ -77,15 +77,15 @@ export function startLeadSearchWorker(): Worker {
         if (jobs.length > 0) {
           await initRunTracking(runId, jobs.length);
           await queues[QUEUE_NAMES.EMAIL_GENERATE].addBulk(jobs);
-          console.log(`[lead-search] Queued ${jobs.length} email generation jobs`);
+          console.log(`[Sequential Job Worker][lead-search] Queued ${jobs.length} email generation jobs`);
         } else {
-          console.log(`[lead-search] No leads to process, finalizing run`);
+          console.log(`[Sequential Job Worker][lead-search] No leads to process, finalizing run`);
           await finalizeRun(runId, { total: 0, done: 0, failed: 0 });
         }
 
         return { leadsFound: leads.length, jobsQueued: jobs.length };
       } catch (error) {
-        console.error(`[lead-search] Error:`, error);
+        console.error(`[Sequential Job Worker][lead-search] Error:`, error);
         throw error;
       }
     },
@@ -96,11 +96,11 @@ export function startLeadSearchWorker(): Worker {
   );
 
   worker.on("completed", (job) => {
-    console.log(`[lead-search] Job ${job.id} completed`);
+    console.log(`[Sequential Job Worker][lead-search] Job ${job.id} completed`);
   });
 
   worker.on("failed", async (job, err) => {
-    console.error(`[lead-search] Job ${job?.id} failed:`, err);
+    console.error(`[Sequential Job Worker][lead-search] Job ${job?.id} failed:`, err);
     if (job) {
       const { runId } = job.data;
       await finalizeRun(runId, { total: 0, done: 0, failed: 0 });

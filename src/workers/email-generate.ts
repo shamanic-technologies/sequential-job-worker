@@ -24,7 +24,7 @@ export function startEmailGenerateWorker(): Worker {
     async (job: Job<EmailGenerateJobData>) => {
       const { runId, clerkOrgId, apolloEnrichmentId, leadData, clientData } = job.data;
       
-      console.log(`[email-generate] Generating email for enrichment ${apolloEnrichmentId}`);
+      console.log(`[Sequential Job Worker][email-generate] Generating email for enrichment ${apolloEnrichmentId}`);
       
       try {
         // Call email generation service with all available data
@@ -58,7 +58,7 @@ export function startEmailGenerateWorker(): Worker {
           clientAdditionalContext: clientData.additionalContext,
         }) as GenerationResult;
         
-        console.log(`[email-generate] Generated email with subject: ${result.subject}`);
+        console.log(`[Sequential Job Worker][email-generate] Generated email with subject: ${result.subject}`);
         
         // Queue email send job with lead's email
         const queues = getQueues();
@@ -76,7 +76,7 @@ export function startEmailGenerateWorker(): Worker {
         
         return { generationId: result.id };
       } catch (error) {
-        console.error(`[email-generate] Error:`, error);
+        console.error(`[Sequential Job Worker][email-generate] Error:`, error);
         throw error;
       }
     },
@@ -91,7 +91,7 @@ export function startEmailGenerateWorker(): Worker {
   );
   
   worker.on("completed", async (job) => {
-    console.log(`[email-generate] Job ${job.id} completed`);
+    console.log(`[Sequential Job Worker][email-generate] Job ${job.id} completed`);
     
     // Track completion and check if this was the last job
     const { runId } = job.data;
@@ -103,7 +103,7 @@ export function startEmailGenerateWorker(): Worker {
   });
   
   worker.on("failed", async (job, err) => {
-    console.error(`[email-generate] Job ${job?.id} failed:`, err);
+    console.error(`[Sequential Job Worker][email-generate] Job ${job?.id} failed:`, err);
     
     if (job) {
       // Track failure and check if this was the last job

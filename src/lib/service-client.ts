@@ -32,6 +32,9 @@ interface ServiceCallOptions {
   extraHeaders?: Record<string, string>;
 }
 
+const MAX_RETRIES = 3;
+const BASE_DELAY_MS = 500;
+
 export async function callService(
   serviceUrl: string,
   path: string,
@@ -58,18 +61,44 @@ export async function callService(
     Object.assign(headers, extraHeaders);
   }
 
-  const response = await fetch(`${serviceUrl}${path}`, {
-    method,
-    headers,
-    body: body ? JSON.stringify(body) : undefined,
-  });
+  let lastError: Error | undefined;
 
-  if (!response.ok) {
-    const error = await response.text();
-    throw new Error(`Service call failed: ${response.status} - ${error}`);
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      const response = await fetch(`${serviceUrl}${path}`, {
+        method,
+        headers,
+        body: body ? JSON.stringify(body) : undefined,
+      });
+
+      if (response.ok) {
+        return response.json();
+      }
+
+      const error = await response.text();
+      lastError = new Error(`Service call failed: ${response.status} - ${error}`);
+
+      // Only retry on 5xx (server errors), not 4xx (client errors)
+      if (response.status < 500) {
+        throw lastError;
+      }
+    } catch (err) {
+      lastError = err instanceof Error ? err : new Error(String(err));
+
+      // Don't retry client errors (re-thrown 4xx above)
+      if (lastError.message.startsWith("Service call failed: 4")) {
+        throw lastError;
+      }
+    }
+
+    if (attempt < MAX_RETRIES) {
+      const delay = BASE_DELAY_MS * Math.pow(2, attempt);
+      console.log(`[Sequential Job Worker] Retrying ${method} ${path} (attempt ${attempt + 2}/${MAX_RETRIES + 1}) in ${delay}ms`);
+      await new Promise((resolve) => setTimeout(resolve, delay));
+    }
   }
 
-  return response.json();
+  throw lastError!;
 }
 
 // Service-specific clients with their own API keys

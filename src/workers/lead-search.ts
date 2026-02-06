@@ -38,6 +38,7 @@ export function startLeadSearchWorker(): Worker {
           const result = await leadService.next(clerkOrgId, {
             namespace,
             parentRunId: runId,
+            campaignId,
             brandId,
             searchParams,
           }) as { found: boolean; lead?: BufferLead };

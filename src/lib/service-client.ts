@@ -233,6 +233,7 @@ export const leadService = {
     params: {
       namespace: string;
       parentRunId: string;
+      campaignId?: string;
       brandId?: string;
       searchParams?: unknown;
     }

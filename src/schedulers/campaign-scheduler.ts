@@ -351,6 +351,10 @@ export async function retriggerCampaignIfNeeded(campaignId: string, clerkOrgId: 
   try {
     const campaignResult = await campaignService.getCampaign(campaignId, clerkOrgId) as { campaign: Campaign };
     const campaign = campaignResult.campaign;
+    // API response may omit clerkOrgId — ensure it's set from the job data
+    if (!campaign.clerkOrgId) {
+      campaign.clerkOrgId = clerkOrgId;
+    }
 
     if (campaign.status !== "ongoing") {
       console.log(`[Sequential Job Worker][retrigger] Campaign ${campaignId} status=${campaign.status}, skipping`);

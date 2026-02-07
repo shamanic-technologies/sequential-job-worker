@@ -23,15 +23,18 @@ export function startEmailGenerateWorker(): Worker {
   const worker = new Worker<EmailGenerateJobData>(
     QUEUE_NAMES.EMAIL_GENERATE,
     async (job: Job<EmailGenerateJobData>) => {
-      const { runId, clerkOrgId, apolloEnrichmentId, leadData, clientData } = job.data;
-      
+      const { runId, clerkOrgId, campaignId, brandId, apolloEnrichmentId, leadData, clientData } = job.data;
+
       console.log(`[Sequential Job Worker][email-generate] Generating email for enrichment ${apolloEnrichmentId}`);
-      
+
       try {
         // Call email generation service with all available data
         const result = await emailGenerationService.generate(clerkOrgId, {
           runId,
           apolloEnrichmentId,
+          appId: "mcpfactory",
+          brandId,
+          campaignId,
           // Lead person info
           leadFirstName: leadData.firstName,
           leadLastName: leadData.lastName,
@@ -68,6 +71,8 @@ export function startEmailGenerateWorker(): Worker {
           {
             runId,
             clerkOrgId,
+            campaignId,
+            brandId,
             emailGenerationId: result.id,
             toEmail: leadData.email || "",
             subject: result.subject,

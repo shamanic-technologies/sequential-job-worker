@@ -104,6 +104,7 @@ export interface EmailGenerateJobData {
   runId: string;
   clerkOrgId: string;
   campaignId: string;
+  brandId: string;
   apolloEnrichmentId: string;
   leadData: {
     firstName: string;
@@ -140,6 +141,8 @@ export interface EmailGenerateJobData {
 export interface EmailSendJobData {
   runId: string;
   clerkOrgId: string;
+  campaignId: string;
+  brandId: string;
   emailGenerationId: string;
   toEmail: string;
   subject: string;

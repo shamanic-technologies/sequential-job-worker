@@ -157,7 +157,7 @@ async function shouldRunCampaign(campaign: Campaign): Promise<ShouldRunResult> {
         if (budgetResult.which === "total") {
           console.log(`[Sequential Job Worker][scheduler] Campaign ${campaign.id}: total budget exhausted, stopping campaign`);
           try {
-            await campaignService.updateCampaign(campaign.id, campaign.clerkOrgId, { status: "stopped" } as any);
+            await campaignService.updateCampaign(campaign.id, campaign.clerkOrgId, { status: "stopped" });
           } catch (err) {
             console.error(`[Sequential Job Worker][scheduler] Failed to auto-stop campaign ${campaign.id}:`, err);
           }
@@ -173,7 +173,7 @@ async function shouldRunCampaign(campaign: Campaign): Promise<ShouldRunResult> {
           // Auto-stop campaign when volume cap reached
           console.log(`[Sequential Job Worker][scheduler] Campaign ${campaign.id}: max leads reached, stopping campaign`);
           try {
-            await campaignService.updateCampaign(campaign.id, campaign.clerkOrgId, { status: "stopped" } as any);
+            await campaignService.updateCampaign(campaign.id, campaign.clerkOrgId, { status: "stopped" });
           } catch (err) {
             console.error(`[Sequential Job Worker][scheduler] Failed to auto-stop campaign ${campaign.id}:`, err);
           }
@@ -185,7 +185,7 @@ async function shouldRunCampaign(campaign: Campaign): Promise<ShouldRunResult> {
           if (consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
             console.log(`[Sequential Job Worker][scheduler] Campaign ${campaign.id}: ${consecutiveFailures} consecutive failed runs, stopping campaign`);
             try {
-              await campaignService.updateCampaign(campaign.id, campaign.clerkOrgId, { status: "stopped" } as any);
+              await campaignService.updateCampaign(campaign.id, campaign.clerkOrgId, { status: "stopped" });
             } catch (err) {
               console.error(`[Sequential Job Worker][scheduler] Failed to auto-stop campaign ${campaign.id} (consecutive failures):`, err);
             }
@@ -382,7 +382,7 @@ export async function retriggerCampaignIfNeeded(campaignId: string, clerkOrgId: 
     if (budgetResult.exceeded) {
       console.log(`[Sequential Job Worker][retrigger] Campaign ${campaignId}: ${budgetResult.which} budget exceeded ($${budgetResult.spendUsd?.toFixed(2)} >= $${budgetResult.limitUsd?.toFixed(2)})`);
       if (budgetResult.which === "total") {
-        await campaignService.updateCampaign(campaignId, clerkOrgId, { status: "stopped" } as any);
+        await campaignService.updateCampaign(campaignId, clerkOrgId, { status: "stopped" });
       }
       return;
     }
@@ -390,14 +390,14 @@ export async function retriggerCampaignIfNeeded(campaignId: string, clerkOrgId: 
     const volumeResult = await isVolumeExceeded(campaign, runs);
     if (volumeResult.exceeded) {
       console.log(`[Sequential Job Worker][retrigger] Campaign ${campaignId}: volume exceeded (${volumeResult.totalServed} >= ${volumeResult.maxLeads}), stopping`);
-      await campaignService.updateCampaign(campaignId, clerkOrgId, { status: "stopped" } as any);
+      await campaignService.updateCampaign(campaignId, clerkOrgId, { status: "stopped" });
       return;
     }
 
     const consecutiveFailures = countConsecutiveFailures(runs);
     if (consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
       console.log(`[Sequential Job Worker][retrigger] Campaign ${campaignId}: ${consecutiveFailures} consecutive failures, stopping`);
-      await campaignService.updateCampaign(campaignId, clerkOrgId, { status: "stopped" } as any);
+      await campaignService.updateCampaign(campaignId, clerkOrgId, { status: "stopped" });
       return;
     }
 

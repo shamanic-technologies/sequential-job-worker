@@ -288,7 +288,7 @@ describe("Campaign Scheduler Logic", () => {
   });
 
   describe("Volume check 404 handling", () => {
-    it("should treat 404 from stats endpoint as 0 served (not exceeded)", async () => {
+    it("should use completed run count when stats returns 404", async () => {
       vi.mocked(leadService.getStats).mockRejectedValue(
         new Error('Service call failed: 404 - {"error":"Not found"}')
       );
@@ -301,10 +301,35 @@ describe("Campaign Scheduler Logic", () => {
         createdAt: new Date().toISOString(),
         maxLeads: 100,
         brandId: "brand-1",
-      });
+      }, []);
 
       expect(result.exceeded).toBe(false);
       expect(result.totalServed).toBe(0);
+    });
+
+    it("should detect exceeded via run count when stats returns 404", async () => {
+      vi.mocked(leadService.getStats).mockRejectedValue(
+        new Error('Service call failed: 404 - {"error":"Not found"}')
+      );
+
+      const completedRuns = Array.from({ length: 5 }, (_, i) => ({
+        id: `run-${i}`,
+        status: "completed",
+        createdAt: new Date().toISOString(),
+      })) as any;
+
+      const result = await isVolumeExceeded({
+        id: "camp-1",
+        orgId: "org-uuid",
+        clerkOrgId: "org_clerk123",
+        status: "ongoing",
+        createdAt: new Date().toISOString(),
+        maxLeads: 5,
+        brandId: "brand-1",
+      }, completedRuns);
+
+      expect(result.exceeded).toBe(true);
+      expect(result.totalServed).toBe(5);
     });
 
     it("should fail closed on non-404 errors", async () => {
@@ -320,7 +345,7 @@ describe("Campaign Scheduler Logic", () => {
         createdAt: new Date().toISOString(),
         maxLeads: 100,
         brandId: "brand-1",
-      });
+      }, []);
 
       expect(result.exceeded).toBe(true);
     });

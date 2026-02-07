@@ -281,13 +281,13 @@ describe("Budget Enforcement", () => {
   describe("isVolumeExceeded", () => {
     it("should return not exceeded when maxLeads is not set", async () => {
       const campaign = makeCampaign({ maxBudgetDailyUsd: "10.00" });
-      const result = await isVolumeExceeded(campaign);
+      const result = await isVolumeExceeded(campaign, []);
       expect(result.exceeded).toBe(false);
     });
 
     it("should return not exceeded when brandId is not set", async () => {
       const campaign = makeCampaign({ maxLeads: 5 });
-      const result = await isVolumeExceeded(campaign);
+      const result = await isVolumeExceeded(campaign, []);
       expect(result.exceeded).toBe(false);
     });
 
@@ -296,7 +296,7 @@ describe("Budget Enforcement", () => {
 
       vi.mocked(leadService.getStats).mockResolvedValue({ totalServed: 25 });
 
-      const result = await isVolumeExceeded(campaign);
+      const result = await isVolumeExceeded(campaign, []);
       expect(result.exceeded).toBe(true);
       expect(result.totalServed).toBe(25);
       expect(result.maxLeads).toBe(5);
@@ -307,7 +307,7 @@ describe("Budget Enforcement", () => {
 
       vi.mocked(leadService.getStats).mockResolvedValue({ totalServed: 5 });
 
-      const result = await isVolumeExceeded(campaign);
+      const result = await isVolumeExceeded(campaign, []);
       expect(result.exceeded).toBe(true);
     });
 
@@ -316,7 +316,7 @@ describe("Budget Enforcement", () => {
 
       vi.mocked(leadService.getStats).mockResolvedValue({ totalServed: 3 });
 
-      const result = await isVolumeExceeded(campaign);
+      const result = await isVolumeExceeded(campaign, []);
       expect(result.exceeded).toBe(false);
       expect(result.totalServed).toBe(3);
       expect(result.maxLeads).toBe(10);
@@ -327,8 +327,24 @@ describe("Budget Enforcement", () => {
 
       vi.mocked(leadService.getStats).mockRejectedValue(new Error("Service down"));
 
-      const result = await isVolumeExceeded(campaign);
+      const result = await isVolumeExceeded(campaign, []);
       expect(result.exceeded).toBe(true);
+    });
+
+    it("should use completed run count when stats returns 404", async () => {
+      const campaign = makeCampaign({ maxLeads: 1, brandId: "brand-123" });
+
+      vi.mocked(leadService.getStats).mockRejectedValue(
+        new Error('Service call failed: 404 - {"error":"Not found"}')
+      );
+
+      const completedRuns = [
+        { id: "run-1", status: "completed", createdAt: new Date().toISOString() },
+      ] as any;
+
+      const result = await isVolumeExceeded(campaign, completedRuns);
+      expect(result.exceeded).toBe(true);
+      expect(result.totalServed).toBe(1);
     });
   });
 });

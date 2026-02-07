@@ -301,8 +301,11 @@ export const leadService = {
     });
   },
 
-  async getStats(clerkOrgId: string, namespace: string) {
-    return callService(this.url, `/stats/${encodeURIComponent(namespace)}`, {
+  async getStats(clerkOrgId: string, params: { brandId?: string; campaignId?: string }) {
+    const qs = new URLSearchParams();
+    if (params.brandId) qs.set("brandId", params.brandId);
+    if (params.campaignId) qs.set("campaignId", params.campaignId);
+    return callService(this.url, `/stats?${qs.toString()}`, {
       method: "GET",
       apiKey: this.apiKey,
       extraHeaders: this.headers(clerkOrgId),

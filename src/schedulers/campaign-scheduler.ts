@@ -337,7 +337,14 @@ export async function isVolumeExceeded(campaign: Campaign): Promise<VolumeCheckR
 
     return { exceeded: false, totalServed, maxLeads: campaign.maxLeads };
   } catch (error) {
-    // Fail closed — if we can't check volume, don't run
+    // 404 means no stats yet for this brand — treat as 0 leads served
+    const is404 = error instanceof Error && error.message.includes("Service call failed: 404");
+    if (is404) {
+      console.log(`[Sequential Job Worker][scheduler] No stats found for campaign ${campaign.id} brand ${campaign.brandId}, treating as 0 served`);
+      return { exceeded: false, totalServed: 0, maxLeads: campaign.maxLeads };
+    }
+
+    // Fail closed on unexpected errors — if we can't check volume, don't run
     console.error(`[Sequential Job Worker][scheduler] Failed to check volume for campaign ${campaign.id}, failing closed:`, error);
     return { exceeded: true, totalServed: 0, maxLeads: campaign.maxLeads };
   }

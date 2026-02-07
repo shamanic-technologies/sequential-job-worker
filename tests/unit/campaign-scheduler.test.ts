@@ -45,9 +45,9 @@ vi.mock("../../src/lib/redis.js", () => ({
   getRedis: vi.fn(() => ({})),
 }));
 
-import { campaignService, runsService } from "../../src/lib/service-client.js";
+import { campaignService, runsService, leadService } from "../../src/lib/service-client.js";
 import { getQueues } from "../../src/queues/index.js";
-import { startCampaignScheduler } from "../../src/schedulers/campaign-scheduler.js";
+import { startCampaignScheduler, isVolumeExceeded } from "../../src/schedulers/campaign-scheduler.js";
 
 describe("Campaign Scheduler Logic", () => {
   beforeEach(() => {
@@ -284,6 +284,45 @@ describe("Campaign Scheduler Logic", () => {
 
       // Should queue since only 2 consecutive failures < threshold of 3
       expect(mockQueueAdd).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("Volume check 404 handling", () => {
+    it("should treat 404 from stats endpoint as 0 served (not exceeded)", async () => {
+      vi.mocked(leadService.getStats).mockRejectedValue(
+        new Error('Service call failed: 404 - {"error":"Not found"}')
+      );
+
+      const result = await isVolumeExceeded({
+        id: "camp-1",
+        orgId: "org-uuid",
+        clerkOrgId: "org_clerk123",
+        status: "ongoing",
+        createdAt: new Date().toISOString(),
+        maxLeads: 100,
+        brandId: "brand-1",
+      });
+
+      expect(result.exceeded).toBe(false);
+      expect(result.totalServed).toBe(0);
+    });
+
+    it("should fail closed on non-404 errors", async () => {
+      vi.mocked(leadService.getStats).mockRejectedValue(
+        new Error("Service call failed: 500 - Internal Server Error")
+      );
+
+      const result = await isVolumeExceeded({
+        id: "camp-1",
+        orgId: "org-uuid",
+        clerkOrgId: "org_clerk123",
+        status: "ongoing",
+        createdAt: new Date().toISOString(),
+        maxLeads: 100,
+        brandId: "brand-1",
+      });
+
+      expect(result.exceeded).toBe(true);
     });
   });
 

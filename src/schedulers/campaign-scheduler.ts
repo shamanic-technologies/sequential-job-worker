@@ -166,7 +166,7 @@ async function shouldRunCampaign(campaign: Campaign): Promise<ShouldRunResult> {
         shouldRun = false;
       } else {
         // Check volume limit
-        const volumeResult = await isVolumeExceeded(campaign);
+        const volumeResult = await isVolumeExceeded(campaign, runs);
         if (volumeResult.exceeded) {
           console.log(`[Sequential Job Worker][scheduler] Campaign ${campaign.id}: volume exceeded (${volumeResult.totalServed} >= ${volumeResult.maxLeads})`);
 
@@ -320,16 +320,20 @@ interface VolumeCheckResult {
   maxLeads?: number;
 }
 
-export async function isVolumeExceeded(campaign: Campaign): Promise<VolumeCheckResult> {
+export async function isVolumeExceeded(campaign: Campaign, runs: Run[]): Promise<VolumeCheckResult> {
   if (!campaign.maxLeads || !campaign.brandId) {
     return { exceeded: false };
   }
 
-  try {
-    const stats = await leadService.getStats(campaign.clerkOrgId, campaign.brandId);
-    const totalServed = stats.totalServed;
+  // Count completed runs as a reliable local count (1 lead per run)
+  const completedRunCount = runs.filter(r => r.status === "completed").length;
 
-    console.log(`[Sequential Job Worker][scheduler] Campaign ${campaign.id} volume: ${totalServed} / ${campaign.maxLeads}`);
+  try {
+    const stats = await leadService.getStats(campaign.clerkOrgId, { brandId: campaign.brandId, campaignId: campaign.id });
+    // Use the higher of stats vs completed runs to prevent under-counting
+    const totalServed = Math.max(stats.totalServed, completedRunCount);
+
+    console.log(`[Sequential Job Worker][scheduler] Campaign ${campaign.id} volume: ${totalServed} / ${campaign.maxLeads} (stats=${stats.totalServed}, runs=${completedRunCount})`);
 
     if (totalServed >= campaign.maxLeads) {
       return { exceeded: true, totalServed, maxLeads: campaign.maxLeads };
@@ -337,11 +341,15 @@ export async function isVolumeExceeded(campaign: Campaign): Promise<VolumeCheckR
 
     return { exceeded: false, totalServed, maxLeads: campaign.maxLeads };
   } catch (error) {
-    // 404 means no stats yet for this brand — treat as 0 leads served
+    // 404 means no stats yet for this brand — fall back to completed run count
     const is404 = error instanceof Error && error.message.includes("Service call failed: 404");
     if (is404) {
-      console.log(`[Sequential Job Worker][scheduler] No stats found for campaign ${campaign.id} brand ${campaign.brandId}, treating as 0 served`);
-      return { exceeded: false, totalServed: 0, maxLeads: campaign.maxLeads };
+      console.log(`[Sequential Job Worker][scheduler] No stats found for campaign ${campaign.id} brand ${campaign.brandId}, using completed run count: ${completedRunCount}`);
+
+      if (completedRunCount >= campaign.maxLeads) {
+        return { exceeded: true, totalServed: completedRunCount, maxLeads: campaign.maxLeads };
+      }
+      return { exceeded: false, totalServed: completedRunCount, maxLeads: campaign.maxLeads };
     }
 
     // Fail closed on unexpected errors — if we can't check volume, don't run
@@ -379,7 +387,7 @@ export async function retriggerCampaignIfNeeded(campaignId: string, clerkOrgId: 
       return;
     }
 
-    const volumeResult = await isVolumeExceeded(campaign);
+    const volumeResult = await isVolumeExceeded(campaign, runs);
     if (volumeResult.exceeded) {
       console.log(`[Sequential Job Worker][retrigger] Campaign ${campaignId}: volume exceeded (${volumeResult.totalServed} >= ${volumeResult.maxLeads}), stopping`);
       await campaignService.updateCampaign(campaignId, clerkOrgId, { status: "stopped" } as any);

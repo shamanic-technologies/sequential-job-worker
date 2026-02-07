@@ -14,7 +14,7 @@ export function startEmailSendWorker(): Worker {
   const worker = new Worker<EmailSendJobData>(
     QUEUE_NAMES.EMAIL_SEND,
     async (job: Job<EmailSendJobData>) => {
-      const { runId, clerkOrgId, emailGenerationId, toEmail, subject, bodyHtml } = job.data;
+      const { runId, clerkOrgId, campaignId, brandId, emailGenerationId, toEmail, subject, bodyHtml } = job.data;
       
       if (!toEmail) {
         console.log(`[Sequential Job Worker][email-send] Skipping - no email address`);
@@ -31,6 +31,9 @@ export function startEmailSendWorker(): Worker {
         const result = await postmarkService.send({
           orgId: clerkOrgId,
           runId,
+          brandId,
+          appId: "mcpfactory",
+          campaignId,
           from: fromEmail,
           to: toEmail,
           subject,

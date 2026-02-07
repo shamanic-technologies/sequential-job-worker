@@ -145,7 +145,7 @@ export const campaignService = {
     });
   },
   
-  async updateCampaign(campaignId: string, clerkOrgId: string, data: { brandId?: string }) {
+  async updateCampaign(campaignId: string, clerkOrgId: string, data: { brandId?: string; status?: string }) {
     return callService(this.url, `/internal/campaigns/${campaignId}`, {
       method: "PATCH",
       body: data,
@@ -179,6 +179,9 @@ export const postmarkService = {
   async send(data: {
     orgId?: string;
     runId?: string;
+    brandId: string;
+    appId: string;
+    campaignId: string;
     from: string;
     to: string;
     subject: string;
@@ -260,11 +263,11 @@ export const leadService = {
   async next(
     clerkOrgId: string,
     params: {
-      namespace: string;
-      parentRunId: string;
-      campaignId?: string;
-      brandId?: string;
+      campaignId: string;
+      brandId: string;
+      parentRunId?: string;
       searchParams?: unknown;
+      clerkUserId?: string;
     }
   ) {
     return callService(this.url, "/buffer/next", {
@@ -275,10 +278,10 @@ export const leadService = {
     });
   },
 
-  async push(clerkOrgId: string, namespace: string, parentRunId: string, leads: Array<{ email: string; externalId?: string; data?: unknown }>) {
+  async push(clerkOrgId: string, params: { campaignId: string; brandId: string; parentRunId?: string; clerkUserId?: string; leads: Array<{ email: string; externalId?: string; data?: unknown }> }) {
     return callService(this.url, "/buffer/push", {
       method: "POST",
-      body: { namespace, parentRunId, leads },
+      body: params,
       apiKey: this.apiKey,
       extraHeaders: this.headers(clerkOrgId),
     });

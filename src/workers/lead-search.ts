@@ -24,7 +24,6 @@ export function startLeadSearchWorker(): Worker {
     QUEUE_NAMES.LEAD_SEARCH,
     async (job: Job<LeadSearchJobData>) => {
       const { runId, clerkOrgId, campaignId, brandId, searchParams, clientData } = job.data;
-      const namespace = brandId;
 
       console.log(`[Sequential Job Worker][lead-search] Starting for run ${runId}, campaign ${campaignId}, brand ${brandId}`);
       console.log(`[Sequential Job Worker][lead-search] Client: ${clientData?.companyName || "(no client data)"}`);
@@ -33,10 +32,9 @@ export function startLeadSearchWorker(): Worker {
         // Pull a single deduplicated lead from buffer
         // Lead-service handles Apollo search internally when buffer is empty
         const result = await leadService.next(clerkOrgId, {
-          namespace,
-          parentRunId: runId,
           campaignId,
           brandId,
+          parentRunId: runId,
           searchParams,
         }) as { found: boolean; lead?: BufferLead };
 
@@ -57,6 +55,7 @@ export function startLeadSearchWorker(): Worker {
               runId,
               clerkOrgId,
               campaignId,
+              brandId,
               apolloEnrichmentId: lead.externalId || "",
               leadData: {
                 firstName: lead.data.firstName as string,

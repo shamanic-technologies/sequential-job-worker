@@ -19,7 +19,7 @@ const openapiPath = join(__dirname, "..", "openapi.json");
 console.log("[Sequential Job Worker] === MCP Factory Worker Starting ===");
 console.log("[Sequential Job Worker] Environment check:");
 console.log("[Sequential Job Worker]   REDIS_URL:", process.env.REDIS_URL ? "✓ configured" : "✗ MISSING");
-console.log("[Sequential Job Worker]   CAMPAIGN_SERVICE_URL:", process.env.CAMPAIGN_SERVICE_URL ? "✓ configured" : "✗ MISSING");
+console.log("[Sequential Job Worker]   CAMPAIGN_SERVICE_URL:", process.env.CAMPAIGN_SERVICE_URL || "✗ MISSING (using default: http://localhost:3003)");
 console.log("[Sequential Job Worker]   BRAND_SERVICE_URL:", process.env.BRAND_SERVICE_URL ? "✓ configured" : "✗ MISSING");
 
 let schedulerInterval: NodeJS.Timeout;

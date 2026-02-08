@@ -41,6 +41,8 @@ const MAX_CONSECUTIVE_FAILURES = 3;
 
 // Shutdown flag to stop polling during graceful shutdown
 let isShuttingDown = false;
+// Prevent concurrent polls (if a poll takes longer than the interval)
+let isPolling = false;
 
 export function stopCampaignScheduler() {
   isShuttingDown = true;
@@ -56,9 +58,10 @@ export function startCampaignScheduler(intervalMs: number = 30000): NodeJS.Timeo
   isShuttingDown = false;
 
   async function pollCampaigns() {
-    if (isShuttingDown) {
+    if (isShuttingDown || isPolling) {
       return;
     }
+    isPolling = true;
     try {
       const result = await campaignService.listCampaigns() as { campaigns: Campaign[] };
       const campaigns = result.campaigns || [];
@@ -91,6 +94,8 @@ export function startCampaignScheduler(intervalMs: number = 30000): NodeJS.Timeo
       }
     } catch (error) {
       console.error("[Sequential Job Worker][scheduler] Error polling campaigns:", error);
+    } finally {
+      isPolling = false;
     }
   }
 

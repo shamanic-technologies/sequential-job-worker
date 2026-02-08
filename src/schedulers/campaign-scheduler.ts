@@ -114,10 +114,10 @@ interface ShouldRunResult {
 }
 
 export async function getRunsForCampaign(campaign: Campaign): Promise<Run[]> {
-  const runsOrgId = await runsService.ensureOrganization(campaign.clerkOrgId);
-  console.log(`[Sequential Job Worker][scheduler] getRunsForCampaign: clerkOrgId=${campaign.clerkOrgId} runsOrgId=${runsOrgId} taskName=${campaign.id}`);
+  console.log(`[Sequential Job Worker][scheduler] getRunsForCampaign: clerkOrgId=${campaign.clerkOrgId} taskName=${campaign.id}`);
   const result = await runsService.listRuns({
-    organizationId: runsOrgId,
+    clerkOrgId: campaign.clerkOrgId,
+    appId: "mcpfactory",
     serviceName: "campaign-service",
     taskName: campaign.id,
     limit: 200,

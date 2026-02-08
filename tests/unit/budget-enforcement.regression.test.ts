@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import type { Run, RunWithCosts } from "@mcpfactory/runs-client";
+import type { Run, RunWithCosts } from "../../src/lib/runs-client.js";
 
 // Mock the service client
 vi.mock("../../src/lib/service-client.js", () => ({
@@ -11,7 +11,6 @@ vi.mock("../../src/lib/service-client.js", () => ({
     getStats: vi.fn(),
   },
   runsService: {
-    ensureOrganization: vi.fn(),
     listRuns: vi.fn(),
     updateRun: vi.fn(),
     getRunsBatch: vi.fn(),
@@ -38,12 +37,15 @@ import {
 function makeRun(overrides: Partial<Run> = {}): Run {
   return {
     id: `run-${Math.random().toString(36).slice(2)}`,
-    parentRunId: null,
     organizationId: "org-id",
     userId: null,
+    appId: "mcpfactory",
+    brandId: null,
+    campaignId: null,
     serviceName: "campaign-service",
     taskName: "campaign-id",
     status: "completed",
+    parentRunId: null,
     startedAt: new Date().toISOString(),
     completedAt: new Date().toISOString(),
     createdAt: new Date().toISOString(),
@@ -59,6 +61,7 @@ function makeRunWithCosts(run: Run, totalCostCents: number): RunWithCosts {
     ownCostInUsdCents: String(totalCostCents),
     childrenCostInUsdCents: "0",
     totalCostInUsdCents: String(totalCostCents),
+    descendantRuns: [],
   };
 }
 

@@ -10,21 +10,18 @@
  */
 
 import {
-  ensureOrganization,
   createRun,
   updateRun as updateRunInService,
   addCosts,
   listRuns,
   getRun,
   getRunsBatch,
-  getRunSummary,
   type Run,
   type RunWithCosts,
+  type RunWithOwnCost,
   type CreateRunParams,
   type CostItem,
   type ListRunsParams,
-  type RunSummaryParams,
-  type SummaryBreakdown,
 } from "./runs-client.js";
 
 interface ServiceCallOptions {
@@ -337,12 +334,10 @@ export const leadService = {
 
 // Runs service - centralized run tracking and cost management
 export const runsService = {
-  ensureOrganization,
   createRun,
   updateRun: updateRunInService,
   addCosts,
   listRuns,
   getRun,
   getRunsBatch,
-  getRunSummary,
 };

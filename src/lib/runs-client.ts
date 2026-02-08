@@ -88,6 +88,10 @@ export interface SummaryBreakdown {
 
 // ─── HTTP helpers ────────────────────────────────────────────────────────────
 
+const MAX_RETRIES = 3;
+const BASE_DELAY_MS = 500;
+const REQUEST_TIMEOUT_MS = 10_000;
+
 async function runsRequest<T>(
   path: string,
   options: { method?: string; body?: unknown } = {}
@@ -99,18 +103,44 @@ async function runsRequest<T>(
     "X-API-Key": RUNS_SERVICE_API_KEY,
   };
 
-  const response = await fetch(`${RUNS_SERVICE_URL}${path}`, {
-    method,
-    headers,
-    body: body ? JSON.stringify(body) : undefined,
-  });
+  let lastError: Error | undefined;
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`runs-service ${method} ${path} failed: ${response.status} - ${errorText}`);
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      const response = await fetch(`${RUNS_SERVICE_URL}${path}`, {
+        method,
+        headers,
+        body: body ? JSON.stringify(body) : undefined,
+        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+      });
+
+      if (response.ok) {
+        return response.json() as Promise<T>;
+      }
+
+      const errorText = await response.text();
+      lastError = new Error(`runs-service ${method} ${path} failed: ${response.status} - ${errorText}`);
+
+      // Don't retry client errors
+      if (response.status < 500) {
+        throw lastError;
+      }
+    } catch (err) {
+      lastError = err instanceof Error ? err : new Error(String(err));
+
+      if (lastError.message.startsWith("runs-service") && lastError.message.includes("failed: 4")) {
+        throw lastError;
+      }
+    }
+
+    if (attempt < MAX_RETRIES) {
+      const delay = BASE_DELAY_MS * Math.pow(2, attempt);
+      console.log(`[Sequential Job Worker] Retrying runs-service ${method} ${path} (attempt ${attempt + 2}/${MAX_RETRIES + 1}) in ${delay}ms`);
+      await new Promise((resolve) => setTimeout(resolve, delay));
+    }
   }
 
-  return response.json() as Promise<T>;
+  throw lastError!;
 }
 
 // ─── Org cache (in-memory, per process) ──────────────────────────────────────

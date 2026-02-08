@@ -34,6 +34,7 @@ interface ServiceCallOptions {
 
 const MAX_RETRIES = 3;
 const BASE_DELAY_MS = 500;
+const REQUEST_TIMEOUT_MS = 10_000;
 
 export async function callService(
   serviceUrl: string,
@@ -69,6 +70,7 @@ export async function callService(
         method,
         headers,
         body: body ? JSON.stringify(body) : undefined,
+        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
       });
 
       if (response.ok) {

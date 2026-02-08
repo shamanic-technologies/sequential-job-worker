@@ -9,7 +9,6 @@ vi.mock("../../src/lib/service-client.js", () => ({
     updateCampaign: vi.fn(),
   },
   runsService: {
-    ensureOrganization: vi.fn(),
     listRuns: vi.fn(),
     updateRun: vi.fn(),
     getRunsBatch: vi.fn(),
@@ -52,7 +51,6 @@ import { startCampaignScheduler, isVolumeExceeded } from "../../src/schedulers/c
 describe("Campaign Scheduler Logic", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(runsService.ensureOrganization).mockResolvedValue("runs-org-id");
   });
 
   afterEach(() => {
@@ -118,9 +116,13 @@ describe("Campaign Scheduler Logic", () => {
             ownCostInUsdCents: "600",
             childrenCostInUsdCents: "0",
             costs: [],
+            descendantRuns: [],
             parentRunId: null,
             organizationId: "org-id",
             userId: null,
+            appId: "mcpfactory",
+            brandId: null,
+            campaignId: null,
             serviceName: "campaign-service",
             taskName: "camp-budget",
             startedAt: new Date().toISOString(),
@@ -214,9 +216,13 @@ describe("Campaign Scheduler Logic", () => {
           ownCostInUsdCents: "0",
           childrenCostInUsdCents: "0",
           costs: [],
+          descendantRuns: [],
           parentRunId: null,
           organizationId: "org-id",
           userId: null,
+          appId: "mcpfactory",
+          brandId: null,
+          campaignId: null,
           serviceName: "campaign-service",
           taskName: "camp-failing",
           startedAt: r.createdAt,
@@ -267,9 +273,13 @@ describe("Campaign Scheduler Logic", () => {
           ownCostInUsdCents: "0",
           childrenCostInUsdCents: "0",
           costs: [],
+          descendantRuns: [],
           parentRunId: null,
           organizationId: "org-id",
           userId: null,
+          appId: "mcpfactory",
+          brandId: null,
+          campaignId: null,
           serviceName: "campaign-service",
           taskName: "camp-recovering",
           startedAt: r.createdAt,

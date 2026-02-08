@@ -2,7 +2,7 @@
  * Generic service client for calling other microservices
  *
  * Each service has its own API key env var:
- * - POSTMARK_SERVICE_API_KEY for postmark-service
+ * - EMAIL_SENDING_SERVICE_API_KEY for email-sending-service
  * - BRAND_SERVICE_API_KEY for brand-service
  * - CAMPAIGN_SERVICE_API_KEY for campaign-service
  * - RUNS_SERVICE_API_KEY for runs-service
@@ -191,21 +191,22 @@ export const emailGenerationService = {
   },
 };
 
-export const postmarkService = {
-  url: process.env.POSTMARK_SERVICE_URL || "https://postmark.mcpfactory.org",
-  apiKey: process.env.POSTMARK_SERVICE_API_KEY,
-  
-  /**
-   * Send an email via postmark-service
-   */
+export const emailSendingService = {
+  url: process.env.EMAIL_SENDING_SERVICE_URL || "https://email-sending.mcpfactory.org",
+  apiKey: process.env.EMAIL_SENDING_SERVICE_API_KEY,
+
   async send(data: {
-    orgId: string;
-    runId: string;
-    brandId: string;
+    type: "transactional" | "broadcast";
     appId: string;
+    clerkOrgId?: string;
+    brandId: string;
     campaignId: string;
-    from: string;
+    runId: string;
+    clerkUserId?: string;
     to: string;
+    recipientFirstName: string;
+    recipientLastName: string;
+    recipientCompany: string;
     subject: string;
     htmlBody?: string;
     textBody?: string;
@@ -219,23 +220,18 @@ export const postmarkService = {
       apiKey: this.apiKey,
     });
   },
-  
-  /**
-   * Get email status by message ID
-   */
-  async getStatus(messageId: string) {
-    return callService(this.url, `/status/${messageId}`, {
-      method: "GET",
-      apiKey: this.apiKey,
-    });
-  },
-  
-  /**
-   * Get emails by run
-   */
-  async getByRun(runId: string) {
-    return callService(this.url, `/status/by-run/${runId}`, {
-      method: "GET",
+
+  async getStats(data: {
+    type?: "transactional" | "broadcast";
+    runIds?: string[];
+    clerkOrgId?: string;
+    brandId?: string;
+    appId?: string;
+    campaignId?: string;
+  }) {
+    return callService(this.url, "/stats", {
+      method: "POST",
+      body: data,
       apiKey: this.apiKey,
     });
   },

@@ -145,6 +145,9 @@ export interface EmailSendJobData {
   brandId: string;
   emailGenerationId: string;
   toEmail: string;
+  recipientFirstName: string;
+  recipientLastName?: string;
+  recipientCompany: string;
   subject: string;
   bodyHtml: string;
 }

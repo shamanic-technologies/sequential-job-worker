@@ -75,6 +75,9 @@ export function startEmailGenerateWorker(): Worker {
             brandId,
             emailGenerationId: result.id,
             toEmail: leadData.email || "",
+            recipientFirstName: leadData.firstName,
+            recipientLastName: leadData.lastName,
+            recipientCompany: leadData.companyName,
             subject: result.subject,
             bodyHtml: result.bodyHtml,
           } as EmailSendJobData

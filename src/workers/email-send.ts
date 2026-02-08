@@ -1,41 +1,40 @@
 import { Worker, Job } from "bullmq";
 import { getRedis } from "../lib/redis.js";
 import { QUEUE_NAMES, EmailSendJobData } from "../queues/index.js";
-import { postmarkService } from "../lib/service-client.js";
+import { emailSendingService } from "../lib/service-client.js";
 
 /**
  * Email Send Worker
- * 
- * Sends generated emails via Postmark
+ *
+ * Sends generated emails via EmailSendingService
  */
 export function startEmailSendWorker(): Worker {
   const connection = getRedis();
-  
+
   const worker = new Worker<EmailSendJobData>(
     QUEUE_NAMES.EMAIL_SEND,
     async (job: Job<EmailSendJobData>) => {
-      const { runId, clerkOrgId, campaignId, brandId, emailGenerationId, toEmail, subject, bodyHtml } = job.data;
-      
+      const { runId, clerkOrgId, campaignId, brandId, emailGenerationId, toEmail, recipientFirstName, recipientLastName, recipientCompany, subject, bodyHtml } = job.data;
+
       if (!toEmail) {
         console.log(`[Sequential Job Worker][email-send] Skipping - no email address`);
         return { skipped: true };
       }
-      
+
       console.log(`[Sequential Job Worker][email-send] Sending email to ${toEmail}`);
-      
+
       try {
-        // Get the from address from env (our growth agency email)
-        const fromEmail = process.env.EMAIL_FROM_ADDRESS || "growth@mcpfactory.org";
-        
-        // Call Postmark service
-        const result = await postmarkService.send({
-          orgId: clerkOrgId,
-          runId,
-          brandId,
+        const result = await emailSendingService.send({
+          type: "broadcast",
           appId: "mcpfactory",
+          clerkOrgId,
+          brandId,
           campaignId,
-          from: fromEmail,
+          runId,
           to: toEmail,
+          recipientFirstName,
+          recipientLastName: recipientLastName || "",
+          recipientCompany,
           subject,
           htmlBody: bodyHtml,
           tag: "cold-email",
@@ -44,9 +43,9 @@ export function startEmailSendWorker(): Worker {
             source: "mcpfactory-worker",
           },
         });
-        
+
         console.log(`[Sequential Job Worker][email-send] Sent email to ${toEmail}`);
-        
+
         return { sent: true, result };
       } catch (error) {
         console.error(`[Sequential Job Worker][email-send] Error:`, error);

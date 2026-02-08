@@ -17,11 +17,14 @@ import {
   listRuns,
   getRun,
   getRunsBatch,
+  getRunSummary,
   type Run,
   type RunWithCosts,
   type CreateRunParams,
   type CostItem,
   type ListRunsParams,
+  type RunSummaryParams,
+  type SummaryBreakdown,
 } from "./runs-client.js";
 
 interface ServiceCallOptions {
@@ -179,8 +182,8 @@ export const postmarkService = {
    * Send an email via postmark-service
    */
   async send(data: {
-    orgId?: string;
-    runId?: string;
+    orgId: string;
+    runId: string;
     brandId: string;
     appId: string;
     campaignId: string;
@@ -235,13 +238,14 @@ export const brandService = {
    * @param brandUrl - Brand website URL
    * @param keyType - "byok" for user's key, "platform" for MCP Factory's key
    */
-  async getSalesProfile(clerkOrgId: string, brandUrl: string, keyType: "byok" | "platform" = "byok") {
+  async getSalesProfile(clerkOrgId: string, brandUrl: string, keyType: "byok" | "platform" = "byok", parentRunId?: string) {
     return callService(this.url, "/sales-profile", {
       method: "POST",
       body: {
         clerkOrgId,
         url: brandUrl,
         keyType,
+        ...(parentRunId && { parentRunId }),
       },
       apiKey: this.apiKey,
     });
@@ -314,7 +318,7 @@ export const leadService = {
       method: "GET",
       apiKey: this.apiKey,
       extraHeaders: this.headers(clerkOrgId),
-    }) as Promise<{ totalServed: number }>;
+    }) as Promise<{ served: number; buffered: number; skipped: number }>;
   },
 };
 
@@ -327,4 +331,5 @@ export const runsService = {
   listRuns,
   getRun,
   getRunsBatch,
+  getRunSummary,
 };

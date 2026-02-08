@@ -336,9 +336,9 @@ export async function isVolumeExceeded(campaign: Campaign, runs: Run[]): Promise
   try {
     const stats = await leadService.getStats(campaign.clerkOrgId, { brandId: campaign.brandId, campaignId: campaign.id });
     // Use the higher of stats vs completed runs to prevent under-counting
-    const totalServed = Math.max(stats.totalServed, completedRunCount);
+    const totalServed = Math.max(stats.served, completedRunCount);
 
-    console.log(`[Sequential Job Worker][scheduler] Campaign ${campaign.id} volume: ${totalServed} / ${campaign.maxLeads} (stats=${stats.totalServed}, runs=${completedRunCount})`);
+    console.log(`[Sequential Job Worker][scheduler] Campaign ${campaign.id} volume: ${totalServed} / ${campaign.maxLeads} (stats=${stats.served}, runs=${completedRunCount})`);
 
     if (totalServed >= campaign.maxLeads) {
       return { exceeded: true, totalServed, maxLeads: campaign.maxLeads };

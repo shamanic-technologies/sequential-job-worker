@@ -56,7 +56,8 @@ export function startBrandProfileWorker(): Worker {
           const profileResult = await brandService.getSalesProfile(
             clerkOrgId,
             brandUrl,
-            "byok"
+            "byok",
+            runId
           ) as SalesProfileResponse;
           
           if (profileResult?.profile) {

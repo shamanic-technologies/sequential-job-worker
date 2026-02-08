@@ -43,10 +43,13 @@ try {
   ];
   console.log(`[Sequential Job Worker] === ${workers.length} workers + scheduler ready ===`);
 
-  // Minimal HTTP server to serve /openapi.json
+  // Minimal HTTP server for health checks and /openapi.json
   const port = parseInt(process.env.PORT || "3000", 10);
   const server = createServer((req, res) => {
-    if (req.method === "GET" && req.url === "/openapi.json") {
+    if (req.method === "GET" && (req.url === "/" || req.url === "/health")) {
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ status: "ok" }));
+    } else if (req.method === "GET" && req.url === "/openapi.json") {
       if (existsSync(openapiPath)) {
         res.writeHead(200, { "Content-Type": "application/json" });
         res.end(readFileSync(openapiPath, "utf-8"));

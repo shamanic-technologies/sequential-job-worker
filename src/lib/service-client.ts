@@ -158,6 +158,23 @@ export const campaignService = {
       clerkOrgId,
     });
   },
+
+  async batchBudgetUsage(campaignIds: string[]) {
+    return callService(this.url, "/campaigns/batch-budget-usage", {
+      method: "POST",
+      body: { campaignIds },
+      apiKey: this.apiKey,
+    }) as Promise<{
+      results: Record<string, {
+        status: string;
+        maxLeads: number | null;
+        maxBudgetTotalUsd: string | null;
+        runs: { total: number; completed: number; failed: number; running: number };
+        totalCostInUsdCents: string | null;
+        error?: string;
+      }>;
+    }>;
+  },
 };
 
 export const emailGenerationService = {

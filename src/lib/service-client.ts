@@ -113,45 +113,45 @@ export const campaignService = {
   apiKey: process.env.CAMPAIGN_SERVICE_API_KEY,
   
   async listCampaigns() {
-    return callService(this.url, "/internal/campaigns/all", {
+    return callService(this.url, "/campaigns/list", {
       method: "GET",
       apiKey: this.apiKey,
     });
   },
-  
+
   async getCampaign(campaignId: string, clerkOrgId: string) {
-    return callService(this.url, `/internal/campaigns/${campaignId}`, {
+    return callService(this.url, `/campaigns/${campaignId}`, {
       method: "GET",
       apiKey: this.apiKey,
       clerkOrgId,
     });
   },
-  
+
   async getRuns(campaignId: string) {
-    return callService(this.url, `/internal/campaigns/${campaignId}/runs/all`, {
+    return callService(this.url, `/campaigns/${campaignId}/runs/list`, {
       method: "GET",
       apiKey: this.apiKey,
     });
   },
-  
+
   async createRun(campaignId: string, clerkOrgId: string) {
-    return callService(this.url, `/internal/campaigns/${campaignId}/runs`, {
+    return callService(this.url, `/campaigns/${campaignId}/runs`, {
       method: "POST",
       apiKey: this.apiKey,
       clerkOrgId,
     });
   },
-  
-  async updateRun(runId: string, data: { status?: string; errorMessage?: string }) {
-    return callService(this.url, `/internal/runs/${runId}`, {
+
+  async updateRun(runId: string, data: { status: "completed" | "failed" }) {
+    return callService(this.url, `/runs/${runId}`, {
       method: "PATCH",
       body: data,
       apiKey: this.apiKey,
     });
   },
-  
-  async updateCampaign(campaignId: string, clerkOrgId: string, data: { brandId?: string; status?: string }) {
-    return callService(this.url, `/internal/campaigns/${campaignId}`, {
+
+  async updateCampaign(campaignId: string, clerkOrgId: string, data: { brandId?: string; status?: "activate" | "stop" }) {
+    return callService(this.url, `/campaigns/${campaignId}`, {
       method: "PATCH",
       body: data,
       apiKey: this.apiKey,

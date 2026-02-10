@@ -1,14 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 /**
- * Tests for brand-profile worker fallback behavior.
+ * Tests for brand-profile worker behavior.
  *
- * Validates that when the profile fetch fails:
- * - If the campaign has an existing brandId, use it as fallback and queue lead-search
- * - If no brandId is available, finalize the run as failed instead of queueing a doomed lead-search
+ * brand-service is the only source of brandId. If it's down, fail the run.
  */
-
-// Inline the logic under test to avoid importing the full BullMQ worker
 
 interface SalesProfileResponse {
   cached?: boolean;
@@ -37,7 +33,6 @@ interface BrandProfileJobData {
   runId: string;
   clerkOrgId: string;
   brandUrl: string;
-  brandId?: string;
   searchParams: Record<string, unknown>;
 }
 
@@ -63,13 +58,13 @@ interface LeadSearchClientData {
 /**
  * Extracted core logic from brand-profile worker for testability.
  * Returns the brandId and clientData that would be passed to lead-search,
- * or null if the run should be failed.
+ * or null if the run should be failed (profile fetch threw).
  */
 async function resolveBrandProfile(
   jobData: BrandProfileJobData,
   getSalesProfile: (clerkOrgId: string, brandUrl: string, keyType: string, runId: string) => Promise<SalesProfileResponse>,
 ): Promise<{ brandId: string; clientData: LeadSearchClientData } | null> {
-  const { clerkOrgId, brandUrl, brandId: fallbackBrandId, runId } = jobData;
+  const { clerkOrgId, brandUrl, runId } = jobData;
   const brandDomain = new URL(brandUrl).hostname.replace(/^www\./, "");
 
   let clientData: LeadSearchClientData = { companyName: brandDomain, brandUrl };
@@ -100,17 +95,14 @@ async function resolveBrandProfile(
       }
     }
   } catch {
-    if (fallbackBrandId) {
-      brandId = fallbackBrandId;
-    } else {
-      return null; // No brandId available — run should be failed
-    }
+    // brand-service is the only source of brandId — no fallback
+    return null;
   }
 
   return { brandId, clientData };
 }
 
-describe("Brand profile fallback behavior", () => {
+describe("Brand profile behavior", () => {
   const baseJobData: BrandProfileJobData = {
     campaignId: "camp-123",
     runId: "run-456",
@@ -150,26 +142,11 @@ describe("Brand profile fallback behavior", () => {
     expect(result!.clientData.keyFeatures).toEqual(["Feature A"]);
   });
 
-  it("should use fallback brandId when profile fetch fails and campaign has brandId", async () => {
+  it("should return null (fail run) when profile fetch fails", async () => {
     const getSalesProfile = vi.fn().mockRejectedValue(
       new Error("Service call failed: 502 - key service down")
     );
 
-    const jobData = { ...baseJobData, brandId: "existing-brand-id" };
-    const result = await resolveBrandProfile(jobData, getSalesProfile);
-
-    expect(result).not.toBeNull();
-    expect(result!.brandId).toBe("existing-brand-id");
-    expect(result!.clientData.companyName).toBe("growthservice.org"); // domain fallback
-    expect(result!.clientData.brandUrl).toBe("https://growthservice.org");
-  });
-
-  it("should return null when profile fetch fails and no fallback brandId", async () => {
-    const getSalesProfile = vi.fn().mockRejectedValue(
-      new Error("Service call failed: 502 - key service down")
-    );
-
-    // No brandId on the job data
     const result = await resolveBrandProfile(baseJobData, getSalesProfile);
 
     expect(result).toBeNull();
@@ -201,24 +178,9 @@ describe("Brand profile fallback behavior", () => {
     expect(result!.clientData.companyName).toBe("growthservice.org");
   });
 
-  it("should strip www. from domain for fallback companyName", async () => {
-    const getSalesProfile = vi.fn().mockRejectedValue(new Error("down"));
-
-    const jobData = {
-      ...baseJobData,
-      brandUrl: "https://www.example.com",
-      brandId: "brand-fallback",
-    };
-    const result = await resolveBrandProfile(jobData, getSalesProfile);
-
-    expect(result).not.toBeNull();
-    expect(result!.clientData.companyName).toBe("example.com");
-  });
-
-  it("should return empty brandId when profile response has no brandId", async () => {
+  it("should return empty brandId when profile response has no brandId field", async () => {
     const getSalesProfile = vi.fn().mockResolvedValue({
       cached: false,
-      // No brandId in response
       profile: {
         companyName: "Acme Corp",
         valueProposition: null,

@@ -41,7 +41,7 @@ export function startBrandProfileWorker(): Worker {
   const worker = new Worker<BrandProfileJobData>(
     QUEUE_NAMES.BRAND_PROFILE,
     async (job: Job<BrandProfileJobData>) => {
-      const { campaignId, runId, clerkOrgId, brandUrl, brandId: fallbackBrandId, searchParams } = job.data;
+      const { campaignId, runId, clerkOrgId, brandUrl, searchParams } = job.data;
 
       // Extract domain from brandUrl for logging and fallback
       const brandDomain = new URL(brandUrl).hostname.replace(/^www\./, '');
@@ -95,19 +95,10 @@ export function startBrandProfileWorker(): Worker {
           }
         } catch (profileError) {
           console.error(`[Sequential Job Worker][brand-profile] Failed to get profile:`, profileError);
-
-          // Use campaign's existing brandId as fallback if available
-          if (fallbackBrandId) {
-            brandId = fallbackBrandId;
-            console.log(`[Sequential Job Worker][brand-profile] Using fallback brandId from campaign: ${brandId}`);
-            console.log(`[Sequential Job Worker][brand-profile] Using domain as fallback company name: ${brandDomain}`);
-          } else {
-            // No brandId available — downstream lead-search will fail without one.
-            // Finalize run as failed immediately instead of queueing a doomed job.
-            console.error(`[Sequential Job Worker][brand-profile] No brandId available (profile fetch failed and campaign has no existing brandId). Failing run.`);
-            await finalizeRun(runId, { total: 0, done: 0, failed: 0 });
-            return { runId, brandUrl, hasProfile: false, failed: true };
-          }
+          // brand-service is the only source of brandId — without it, downstream steps will fail.
+          // Fail the run immediately instead of queueing a doomed lead-search job.
+          await finalizeRun(runId, { total: 0, done: 0, failed: 0 });
+          return { runId, brandUrl, hasProfile: false, failed: true };
         }
         
         // 2. Queue lead-search job

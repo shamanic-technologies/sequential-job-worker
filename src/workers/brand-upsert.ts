@@ -89,7 +89,8 @@ export function startBrandUpsertWorker(): Worker {
             campaignId,
             runId,
             clerkOrgId,
-            brandUrl,  // No brandId needed - brand-service uses clerkOrgId + brandUrl
+            brandUrl,
+            brandId: campaign.brandId || undefined, // Fallback if profile fetch fails
             searchParams,
           } as BrandProfileJobData
         );

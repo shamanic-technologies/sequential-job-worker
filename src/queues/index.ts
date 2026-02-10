@@ -42,6 +42,7 @@ export interface BrandProfileJobData {
   runId: string;
   clerkOrgId: string;
   brandUrl: string;
+  brandId?: string; // Existing brandId from campaign (fallback if profile fetch fails)
   maxLeads?: number | null;
   searchParams: {
     personTitles?: string[];

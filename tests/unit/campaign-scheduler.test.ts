@@ -241,7 +241,7 @@ describe("Campaign Scheduler Logic", () => {
       expect(campaignService.updateCampaign).toHaveBeenCalledWith(
         "camp-failing",
         "org_clerk_fail",
-        expect.objectContaining({ status: "stopped" })
+        expect.objectContaining({ status: "stop" })
       );
     });
 

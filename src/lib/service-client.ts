@@ -30,6 +30,7 @@ interface ServiceCallOptions {
   clerkOrgId?: string;
   apiKey?: string; // Service-specific API key
   extraHeaders?: Record<string, string>;
+  noRetry?: boolean; // Skip retries for non-idempotent mutations
 }
 
 const MAX_RETRIES = 3;
@@ -41,7 +42,9 @@ export async function callService(
   path: string,
   options: ServiceCallOptions
 ): Promise<unknown> {
-  const { method = "GET", body, clerkOrgId, apiKey, extraHeaders } = options;
+  const { method = "GET", body, clerkOrgId, apiKey, extraHeaders, noRetry } = options;
+
+  const maxRetries = noRetry ? 0 : MAX_RETRIES;
 
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
@@ -64,7 +67,7 @@ export async function callService(
 
   let lastError: Error | undefined;
 
-  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
       const response = await fetch(`${serviceUrl}${path}`, {
         method,
@@ -93,9 +96,9 @@ export async function callService(
       }
     }
 
-    if (attempt < MAX_RETRIES) {
+    if (attempt < maxRetries) {
       const delay = BASE_DELAY_MS * Math.pow(2, attempt);
-      console.log(`[Sequential Job Worker] Retrying ${method} ${path} (attempt ${attempt + 2}/${MAX_RETRIES + 1}) in ${delay}ms`);
+      console.log(`[Sequential Job Worker] Retrying ${method} ${path} (attempt ${attempt + 2}/${maxRetries + 1}) in ${delay}ms`);
       await new Promise((resolve) => setTimeout(resolve, delay));
     }
   }
@@ -184,6 +187,7 @@ export const emailGenerationService = {
       body: data,
       apiKey: this.apiKey,
       clerkOrgId,
+      noRetry: true,
     });
   },
 };
@@ -215,6 +219,7 @@ export const emailSendingService = {
       method: "POST",
       body: data,
       apiKey: this.apiKey,
+      noRetry: true,
     });
   },
 
@@ -291,6 +296,7 @@ export const leadService = {
       body: params,
       apiKey: this.apiKey,
       extraHeaders: this.headers(clerkOrgId),
+      noRetry: true, // Non-idempotent: each call consumes a lead from the buffer
     });
   },
 

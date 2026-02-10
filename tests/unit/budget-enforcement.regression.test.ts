@@ -297,7 +297,7 @@ describe("Budget Enforcement", () => {
     it("should return exceeded when totalServed >= maxLeads", async () => {
       const campaign = makeCampaign({ maxLeads: 5, brandId: "brand-123" });
 
-      vi.mocked(leadService.getStats).mockResolvedValue({ totalServed: 25 });
+      vi.mocked(leadService.getStats).mockResolvedValue({ served: 25, buffered: 0, skipped: 0 });
 
       const result = await isVolumeExceeded(campaign, []);
       expect(result.exceeded).toBe(true);
@@ -308,7 +308,7 @@ describe("Budget Enforcement", () => {
     it("should return exceeded when totalServed equals maxLeads exactly", async () => {
       const campaign = makeCampaign({ maxLeads: 5, brandId: "brand-123" });
 
-      vi.mocked(leadService.getStats).mockResolvedValue({ totalServed: 5 });
+      vi.mocked(leadService.getStats).mockResolvedValue({ served: 5, buffered: 0, skipped: 0 });
 
       const result = await isVolumeExceeded(campaign, []);
       expect(result.exceeded).toBe(true);
@@ -317,7 +317,7 @@ describe("Budget Enforcement", () => {
     it("should return not exceeded when totalServed < maxLeads", async () => {
       const campaign = makeCampaign({ maxLeads: 10, brandId: "brand-123" });
 
-      vi.mocked(leadService.getStats).mockResolvedValue({ totalServed: 3 });
+      vi.mocked(leadService.getStats).mockResolvedValue({ served: 3, buffered: 0, skipped: 0 });
 
       const result = await isVolumeExceeded(campaign, []);
       expect(result.exceeded).toBe(false);

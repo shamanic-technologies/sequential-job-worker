@@ -99,25 +99,16 @@ export function startEmailGenerateWorker(): Worker {
     }
   );
   
-  worker.on("completed", async (job) => {
+  worker.on("completed", (job) => {
     console.log(`[Sequential Job Worker][email-generate] Job ${job.id} completed`);
-    
-    // Track completion and check if this was the last job
-    const { runId } = job.data;
-    const result = await markJobDone(runId, true);
-    
-    if (result.isLast) {
-      await finalizeRun(runId, result);
-      const { campaignId, clerkOrgId } = job.data;
-      await retriggerCampaignIfNeeded(campaignId, clerkOrgId);
-    }
+    // Run tracking moved to email-send worker (the terminal step)
   });
 
   worker.on("failed", async (job, err) => {
     console.error(`[Sequential Job Worker][email-generate] Job ${job?.id} failed:`, err);
 
     if (job) {
-      // Track failure and check if this was the last job
+      // Track failure here since email-send won't run
       const { runId, campaignId, clerkOrgId } = job.data;
       const result = await markJobDone(runId, false);
 

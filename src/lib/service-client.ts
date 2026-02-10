@@ -31,6 +31,7 @@ interface ServiceCallOptions {
   apiKey?: string; // Service-specific API key
   extraHeaders?: Record<string, string>;
   noRetry?: boolean; // Skip retries for non-idempotent mutations
+  timeoutMs?: number; // Override default request timeout
 }
 
 const MAX_RETRIES = 3;
@@ -42,7 +43,7 @@ export async function callService(
   path: string,
   options: ServiceCallOptions
 ): Promise<unknown> {
-  const { method = "GET", body, clerkOrgId, apiKey, extraHeaders, noRetry } = options;
+  const { method = "GET", body, clerkOrgId, apiKey, extraHeaders, noRetry, timeoutMs } = options;
 
   const maxRetries = noRetry ? 0 : MAX_RETRIES;
 
@@ -73,7 +74,7 @@ export async function callService(
         method,
         headers,
         body: body ? JSON.stringify(body) : undefined,
-        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+        signal: AbortSignal.timeout(timeoutMs ?? REQUEST_TIMEOUT_MS),
       });
 
       if (response.ok) {
@@ -188,6 +189,7 @@ export const emailGenerationService = {
       apiKey: this.apiKey,
       clerkOrgId,
       noRetry: true,
+      timeoutMs: 60_000,
     });
   },
 };
@@ -220,6 +222,7 @@ export const emailSendingService = {
       body: data,
       apiKey: this.apiKey,
       noRetry: true,
+      timeoutMs: 30_000,
     });
   },
 
@@ -297,6 +300,7 @@ export const leadService = {
       apiKey: this.apiKey,
       extraHeaders: this.headers(clerkOrgId),
       noRetry: true, // Non-idempotent: each call consumes a lead from the buffer
+      timeoutMs: 60_000, // Apollo search + enrichment can be slow
     });
   },
 

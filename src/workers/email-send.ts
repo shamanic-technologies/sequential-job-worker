@@ -2,6 +2,8 @@ import { Worker, Job } from "bullmq";
 import { getRedis } from "../lib/redis.js";
 import { QUEUE_NAMES, EmailSendJobData } from "../queues/index.js";
 import { emailSendingService } from "../lib/service-client.js";
+import { markJobDone, finalizeRun } from "../lib/run-tracker.js";
+import { retriggerCampaignIfNeeded } from "../schedulers/campaign-scheduler.js";
 
 /**
  * Email Send Worker
@@ -62,12 +64,30 @@ export function startEmailSendWorker(): Worker {
     }
   );
   
-  worker.on("completed", (job) => {
+  worker.on("completed", async (job) => {
     console.log(`[Sequential Job Worker][email-send] Job ${job.id} completed`);
+
+    const { runId, campaignId, clerkOrgId } = job.data;
+    const result = await markJobDone(runId, true);
+
+    if (result.isLast) {
+      await finalizeRun(runId, result);
+      await retriggerCampaignIfNeeded(campaignId, clerkOrgId);
+    }
   });
-  
-  worker.on("failed", (job, err) => {
+
+  worker.on("failed", async (job, err) => {
     console.error(`[Sequential Job Worker][email-send] Job ${job?.id} failed:`, err);
+
+    if (job) {
+      const { runId, campaignId, clerkOrgId } = job.data;
+      const result = await markJobDone(runId, false);
+
+      if (result.isLast) {
+        await finalizeRun(runId, result);
+        await retriggerCampaignIfNeeded(campaignId, clerkOrgId);
+      }
+    }
   });
   
   return worker;

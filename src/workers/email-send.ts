@@ -5,6 +5,13 @@ import { emailSendingService } from "../lib/service-client.js";
 import { markJobDone, finalizeRun } from "../lib/run-tracker.js";
 import { retriggerCampaignIfNeeded } from "../schedulers/campaign-scheduler.js";
 
+interface SendResult {
+  success: boolean;
+  messageId?: string;
+  provider?: string;
+  error?: string;
+}
+
 /**
  * Email Send Worker
  *
@@ -44,13 +51,17 @@ export function startEmailSendWorker(): Worker {
             emailGenerationId,
             source: "mcpfactory-worker",
           },
-        });
+        }) as SendResult;
 
-        console.log(`[Sequential Job Worker][email-send] Sent email to ${toEmail}`);
+        if (!result.success) {
+          throw new Error(`Email sending service returned failure: ${result.error || "unknown error"}`);
+        }
+
+        console.log(`[Sequential Job Worker][email-send] Sent email to ${toEmail} (messageId=${result.messageId}, provider=${result.provider})`);
 
         return { sent: true, result };
       } catch (error) {
-        console.error(`[Sequential Job Worker][email-send] Error:`, error);
+        console.error(`[Sequential Job Worker][email-send] Error sending to ${toEmail}:`, error);
         throw error;
       }
     },

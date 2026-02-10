@@ -53,6 +53,8 @@ export function startEmailSendWorker(): Worker {
           },
         }) as SendResult;
 
+        console.log(`[Sequential Job Worker][email-send] Response for ${toEmail}: ${JSON.stringify(result)}`);
+
         if (!result.success) {
           throw new Error(`Email sending service returned failure: ${result.error || "unknown error"}`);
         }

@@ -31,18 +31,19 @@ interface ServiceCallOptions {
   apiKey?: string; // Service-specific API key
   extraHeaders?: Record<string, string>;
   noRetry?: boolean; // Skip retries for non-idempotent mutations
+  timeoutMs?: number; // Override default request timeout
 }
 
 const MAX_RETRIES = 3;
 const BASE_DELAY_MS = 500;
-const REQUEST_TIMEOUT_MS = 10_000;
+const REQUEST_TIMEOUT_MS = 60_000;
 
 export async function callService(
   serviceUrl: string,
   path: string,
   options: ServiceCallOptions
 ): Promise<unknown> {
-  const { method = "GET", body, clerkOrgId, apiKey, extraHeaders, noRetry } = options;
+  const { method = "GET", body, clerkOrgId, apiKey, extraHeaders, noRetry, timeoutMs } = options;
 
   const maxRetries = noRetry ? 0 : MAX_RETRIES;
 
@@ -73,7 +74,7 @@ export async function callService(
         method,
         headers,
         body: body ? JSON.stringify(body) : undefined,
-        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+        signal: AbortSignal.timeout(timeoutMs ?? REQUEST_TIMEOUT_MS),
       });
 
       if (response.ok) {

@@ -36,7 +36,7 @@ interface ServiceCallOptions {
 
 const MAX_RETRIES = 3;
 const BASE_DELAY_MS = 500;
-const REQUEST_TIMEOUT_MS = 10_000;
+const REQUEST_TIMEOUT_MS = 60_000;
 
 export async function callService(
   serviceUrl: string,
@@ -189,7 +189,6 @@ export const emailGenerationService = {
       apiKey: this.apiKey,
       clerkOrgId,
       noRetry: true,
-      timeoutMs: 60_000,
     });
   },
 };
@@ -222,7 +221,6 @@ export const emailSendingService = {
       body: data,
       apiKey: this.apiKey,
       noRetry: true,
-      timeoutMs: 30_000,
     });
   },
 
@@ -300,7 +298,6 @@ export const leadService = {
       apiKey: this.apiKey,
       extraHeaders: this.headers(clerkOrgId),
       noRetry: true, // Non-idempotent: each call consumes a lead from the buffer
-      timeoutMs: 60_000, // Apollo search + enrichment can be slow
     });
   },
 

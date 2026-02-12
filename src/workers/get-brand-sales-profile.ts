@@ -1,8 +1,7 @@
 import { Worker, Job } from "bullmq";
 import { getRedis } from "../lib/redis.js";
-import { getQueues, QUEUE_NAMES, GetBrandSalesProfileJobData, GetCampaignLeadsJobData } from "../queues/index.js";
+import { getQueues, QUEUE_NAMES, GetBrandSalesProfileJobData, GetCampaignLeadsJobData, EndRunJobData } from "../queues/index.js";
 import { brandService } from "../lib/service-client.js";
-import { finalizeRun } from "../lib/run-tracker.js";
 
 interface SalesProfileResponse {
   cached?: boolean;
@@ -118,8 +117,12 @@ export function startGetBrandSalesProfileWorker(): Worker {
   worker.on("failed", async (job, err) => {
     console.error(`[Sequential Job Worker][get-brand-sales-profile] Job ${job?.id} failed:`, err);
     if (job) {
-      const { runId } = job.data;
-      await finalizeRun(runId, { total: 0, done: 0, failed: 0 });
+      const { runId, campaignId, clerkOrgId } = job.data;
+      const queues = getQueues();
+      await queues[QUEUE_NAMES.END_RUN].add(
+        `end-${runId}`,
+        { runId, campaignId, clerkOrgId, stats: { total: 0, done: 0, failed: 0 } } as EndRunJobData
+      );
     }
   });
 

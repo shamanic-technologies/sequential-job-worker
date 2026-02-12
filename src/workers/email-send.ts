@@ -1,9 +1,8 @@
 import { Worker, Job } from "bullmq";
 import { getRedis } from "../lib/redis.js";
-import { QUEUE_NAMES, EmailSendJobData } from "../queues/index.js";
+import { getQueues, QUEUE_NAMES, EmailSendJobData, EndRunJobData } from "../queues/index.js";
 import { emailSendingService } from "../lib/service-client.js";
-import { markJobDone, finalizeRun } from "../lib/run-tracker.js";
-import { retriggerCampaignIfNeeded } from "../schedulers/campaign-scheduler.js";
+import { markJobDone } from "../lib/run-tracker.js";
 
 interface SendResult {
   success: boolean;
@@ -82,8 +81,11 @@ export function startEmailSendWorker(): Worker {
     const result = await markJobDone(runId, true);
 
     if (result.isLast) {
-      await finalizeRun(runId, result);
-      await retriggerCampaignIfNeeded(campaignId, clerkOrgId);
+      const queues = getQueues();
+      await queues[QUEUE_NAMES.END_RUN].add(
+        `end-${runId}`,
+        { runId, campaignId, clerkOrgId, stats: result } as EndRunJobData
+      );
     }
   });
 
@@ -95,8 +97,11 @@ export function startEmailSendWorker(): Worker {
       const result = await markJobDone(runId, false);
 
       if (result.isLast) {
-        await finalizeRun(runId, result);
-        await retriggerCampaignIfNeeded(campaignId, clerkOrgId);
+        const queues = getQueues();
+        await queues[QUEUE_NAMES.END_RUN].add(
+          `end-${runId}`,
+          { runId, campaignId, clerkOrgId, stats: result } as EndRunJobData
+        );
       }
     }
   });

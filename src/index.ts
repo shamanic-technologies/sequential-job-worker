@@ -10,6 +10,7 @@ import { startGetBrandSalesProfileWorker } from "./workers/get-brand-sales-profi
 import { startGetCampaignLeadsWorker } from "./workers/get-campaign-leads.js";
 import { startEmailGenerateWorker } from "./workers/email-generate.js";
 import { startEmailSendWorker } from "./workers/email-send.js";
+import { startEndRunWorker } from "./workers/end-run.js";
 import { startCampaignScheduler, stopCampaignScheduler } from "./schedulers/campaign-scheduler.js";
 import { closeRedis } from "./lib/redis.js";
 
@@ -39,7 +40,7 @@ try {
   console.log("[Sequential Job Worker] Scheduler started");
 
   // Start all workers in the campaign run chain:
-  // create-run → get-campaign-info → get-brand-sales-profile → get-campaign-leads → email-generate → email-send
+  // create-run → get-campaign-info → get-brand-sales-profile → get-campaign-leads → email-generate → email-send → end-run
   console.log("[Sequential Job Worker] Starting workers...");
   workers = [
     startCreateRunWorker(),            // Step 1: Create run in runs-service
@@ -48,6 +49,7 @@ try {
     startGetCampaignLeadsWorker(),     // Step 4: Search leads via lead-service
     startEmailGenerateWorker(),        // Step 5: Generate emails
     startEmailSendWorker(),            // Step 6: Send emails
+    startEndRunWorker(),               // Step 7: Finalize run, clean up, re-trigger
   ];
   console.log(`[Sequential Job Worker] === ${workers.length} workers + scheduler ready ===`);
 

@@ -76,5 +76,16 @@ describe('No Legacy Patterns - Worker', () => {
     expect(workerFiles).toContain('get-campaign-leads.ts');
     expect(workerFiles).toContain('email-generate.ts');
     expect(workerFiles).toContain('email-send.ts');
+    expect(workerFiles).toContain('end-run.ts');
+  });
+
+  it('should NOT call finalizeRun directly in any worker (use end-run queue instead)', () => {
+    const workerFiles = fs.readdirSync(workersDir)
+      .filter(f => f.endsWith('.ts') && f !== 'end-run.ts');
+
+    for (const file of workerFiles) {
+      const content = fs.readFileSync(path.join(workersDir, file), 'utf-8');
+      expect(content, `${file} should not import finalizeRun`).not.toContain('finalizeRun');
+    }
   });
 });

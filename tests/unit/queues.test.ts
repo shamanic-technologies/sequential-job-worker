@@ -9,10 +9,12 @@ describe("Queue definitions", () => {
       "get-campaign-leads",
       "email-generate",
       "email-send",
+      "end-run",
     ];
     expect(queueNames).toContain("create-run");
     expect(queueNames).toContain("get-campaign-leads");
     expect(queueNames).toContain("email-send");
+    expect(queueNames).toContain("end-run");
   });
 
   it("should define job data interface", () => {

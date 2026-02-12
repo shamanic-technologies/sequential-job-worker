@@ -1,6 +1,6 @@
 # Project: sequential-job-worker
 
-A sequential job pipeline worker built on BullMQ and Redis. Processes chained campaign jobs (create run → get campaign info → get brand sales profile → get campaign leads → email generate → email send) with rate limiting, budget enforcement, and run tracking.
+A sequential job pipeline worker built on BullMQ and Redis. Processes chained campaign jobs (create run → get campaign info → get brand sales profile → get campaign leads → email generate → email send → end run) with rate limiting, budget enforcement, and run tracking.
 
 ## Commands
 
@@ -24,6 +24,7 @@ A sequential job pipeline worker built on BullMQ and Redis. Processes chained ca
   - `get-campaign-leads.ts` — Step 4: Search leads via lead-service
   - `email-generate.ts` — Step 5: Generate email content
   - `email-send.ts` — Step 6: Send emails
+  - `end-run.ts` — Step 7: Finalize run status, clean up tracking, re-trigger campaign
 - `src/schedulers/campaign-scheduler.ts` — Polls for campaigns, enforces budgets/volume gates
 - `src/lib/redis.ts` — Redis connection management
 - `src/lib/run-tracker.ts` — Redis-backed job completion tracking

@@ -2,8 +2,16 @@ import { describe, it, expect } from "vitest";
 
 describe("Queue definitions", () => {
   it("should define queue names", () => {
-    const queueNames = ["lead-search", "email-generate", "email-send", "campaign-run"];
-    expect(queueNames).toContain("lead-search");
+    const queueNames = [
+      "create-run",
+      "get-campaign-info",
+      "get-brand-sales-profile",
+      "get-campaign-leads",
+      "email-generate",
+      "email-send",
+    ];
+    expect(queueNames).toContain("create-run");
+    expect(queueNames).toContain("get-campaign-leads");
     expect(queueNames).toContain("email-send");
   });
 
@@ -11,9 +19,8 @@ describe("Queue definitions", () => {
     const jobData = {
       campaignId: "camp_123",
       clerkOrgId: "org_456",
-      retryCount: 0,
     };
     expect(jobData.campaignId).toBeDefined();
-    expect(jobData.retryCount).toBe(0);
+    expect(jobData.clerkOrgId).toBeDefined();
   });
 });

@@ -1,6 +1,6 @@
 # Project: sequential-job-worker
 
-A sequential job pipeline worker built on BullMQ and Redis. Processes chained campaign jobs (brand upsert → brand profile → lead search → email generate → email send) with rate limiting, budget enforcement, and run tracking.
+A sequential job pipeline worker built on BullMQ and Redis. Processes chained campaign jobs (create run → get campaign info → get brand sales profile → get campaign leads → email generate → email send) with rate limiting, budget enforcement, and run tracking.
 
 ## Commands
 
@@ -18,11 +18,12 @@ A sequential job pipeline worker built on BullMQ and Redis. Processes chained ca
 - `src/instrument.ts` — Sentry initialization (must be imported first)
 - `src/queues/index.ts` — BullMQ queue definitions and job data types
 - `src/workers/` — One worker per pipeline step:
-  - `brand-upsert.ts` — Step 1: Create run, initialize brand
-  - `brand-profile.ts` — Step 2: Fetch sales profile from brand-service
-  - `lead-search.ts` — Step 3: Search leads via Apollo (fan-out)
-  - `email-generate.ts` — Step 4: Generate email content
-  - `email-send.ts` — Step 5: Send emails
+  - `create-run.ts` — Step 1: Create run in runs-service
+  - `get-campaign-info.ts` — Step 2: Fetch campaign details (brandId, brandUrl, searchParams)
+  - `get-brand-sales-profile.ts` — Step 3: Fetch sales profile from brand-service for email personalization
+  - `get-campaign-leads.ts` — Step 4: Search leads via lead-service
+  - `email-generate.ts` — Step 5: Generate email content
+  - `email-send.ts` — Step 6: Send emails
 - `src/schedulers/campaign-scheduler.ts` — Polls for campaigns, enforces budgets/volume gates
 - `src/lib/redis.ts` — Redis connection management
 - `src/lib/run-tracker.ts` — Redis-backed job completion tracking

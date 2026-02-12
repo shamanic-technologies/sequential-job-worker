@@ -4,9 +4,10 @@ import { createServer } from "http";
 import { readFileSync, existsSync } from "fs";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
-import { startBrandUpsertWorker } from "./workers/brand-upsert.js";
-import { startBrandProfileWorker } from "./workers/brand-profile.js";
-import { startLeadSearchWorker } from "./workers/lead-search.js";
+import { startCreateRunWorker } from "./workers/create-run.js";
+import { startGetCampaignInfoWorker } from "./workers/get-campaign-info.js";
+import { startGetBrandSalesProfileWorker } from "./workers/get-brand-sales-profile.js";
+import { startGetCampaignLeadsWorker } from "./workers/get-campaign-leads.js";
 import { startEmailGenerateWorker } from "./workers/email-generate.js";
 import { startEmailSendWorker } from "./workers/email-send.js";
 import { startCampaignScheduler, stopCampaignScheduler } from "./schedulers/campaign-scheduler.js";
@@ -29,7 +30,7 @@ if (!process.env.REDIS_URL) {
 }
 
 let schedulerInterval: NodeJS.Timeout;
-let workers: ReturnType<typeof startBrandUpsertWorker>[] = [];
+let workers: ReturnType<typeof startCreateRunWorker>[] = [];
 
 try {
   // Start the scheduler to poll for ongoing campaigns
@@ -38,14 +39,15 @@ try {
   console.log("[Sequential Job Worker] Scheduler started");
 
   // Start all workers in the campaign run chain:
-  // brand-upsert (concurrency=1) → brand-profile → lead-search → email-generate → email-send
+  // create-run → get-campaign-info → get-brand-sales-profile → get-campaign-leads → email-generate → email-send
   console.log("[Sequential Job Worker] Starting workers...");
   workers = [
-    startBrandUpsertWorker(),   // Step 1: Create run, get brand (non-concurrent)
-    startBrandProfileWorker(),  // Step 2: Get sales profile from brand-service
-    startLeadSearchWorker(),    // Step 3: Search leads via Apollo
-    startEmailGenerateWorker(), // Step 4: Generate emails
-    startEmailSendWorker(),     // Step 5: Send emails
+    startCreateRunWorker(),            // Step 1: Create run in runs-service
+    startGetCampaignInfoWorker(),      // Step 2: Fetch campaign details
+    startGetBrandSalesProfileWorker(), // Step 3: Fetch sales profile from brand-service
+    startGetCampaignLeadsWorker(),     // Step 4: Search leads via lead-service
+    startEmailGenerateWorker(),        // Step 5: Generate emails
+    startEmailSendWorker(),            // Step 6: Send emails
   ];
   console.log(`[Sequential Job Worker] === ${workers.length} workers + scheduler ready ===`);
 

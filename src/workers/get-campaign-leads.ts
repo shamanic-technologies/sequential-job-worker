@@ -1,6 +1,6 @@
 import { Worker, Job } from "bullmq";
 import { getRedis } from "../lib/redis.js";
-import { getQueues, QUEUE_NAMES, LeadSearchJobData, EmailGenerateJobData } from "../queues/index.js";
+import { getQueues, QUEUE_NAMES, GetCampaignLeadsJobData, EmailGenerateJobData } from "../queues/index.js";
 import { leadService } from "../lib/service-client.js";
 import { initRunTracking, finalizeRun } from "../lib/run-tracker.js";
 
@@ -11,22 +11,22 @@ interface BufferLead {
 }
 
 /**
- * Lead Search Worker
+ * Get Campaign Leads Worker (concurrency=3)
  *
- * Pulls a single deduplicated lead from lead-service buffer per run.
+ * Step 4: Pulls a single deduplicated lead from lead-service buffer per run.
  * The scheduler handles back-to-back runs, gated by budget and volume (maxLeads).
  * One lead per run = granular control over spend and volume.
  */
-export function startLeadSearchWorker(): Worker {
+export function startGetCampaignLeadsWorker(): Worker {
   const connection = getRedis();
 
-  const worker = new Worker<LeadSearchJobData>(
-    QUEUE_NAMES.LEAD_SEARCH,
-    async (job: Job<LeadSearchJobData>) => {
+  const worker = new Worker<GetCampaignLeadsJobData>(
+    QUEUE_NAMES.GET_CAMPAIGN_LEADS,
+    async (job: Job<GetCampaignLeadsJobData>) => {
       const { runId, clerkOrgId, campaignId, brandId, searchParams, clientData } = job.data;
 
-      console.log(`[Sequential Job Worker][lead-search] Starting for run ${runId}, campaign ${campaignId}, brand ${brandId}`);
-      console.log(`[Sequential Job Worker][lead-search] Client: ${clientData?.companyName || "(no client data)"}`);
+      console.log(`[Sequential Job Worker][get-campaign-leads] Starting for run ${runId}, campaign ${campaignId}, brand ${brandId}`);
+      console.log(`[Sequential Job Worker][get-campaign-leads] Client: ${clientData?.companyName || "(no client data)"}`);
 
       try {
         // Pull a single deduplicated lead from buffer
@@ -43,7 +43,7 @@ export function startLeadSearchWorker(): Worker {
           leads.push(result.lead);
         }
 
-        console.log(`[Sequential Job Worker][lead-search] Pulled ${leads.length} leads from buffer`);
+        console.log(`[Sequential Job Worker][get-campaign-leads] Pulled ${leads.length} leads from buffer`);
 
         // Queue email generation for each lead
         const queues = getQueues();
@@ -76,15 +76,15 @@ export function startLeadSearchWorker(): Worker {
         if (jobs.length > 0) {
           await initRunTracking(runId, jobs.length);
           await queues[QUEUE_NAMES.EMAIL_GENERATE].addBulk(jobs);
-          console.log(`[Sequential Job Worker][lead-search] Queued ${jobs.length} email generation jobs`);
+          console.log(`[Sequential Job Worker][get-campaign-leads] Queued ${jobs.length} email generation jobs`);
         } else {
-          console.log(`[Sequential Job Worker][lead-search] No leads to process, finalizing run`);
+          console.log(`[Sequential Job Worker][get-campaign-leads] No leads to process, finalizing run`);
           await finalizeRun(runId, { total: 0, done: 0, failed: 0 });
         }
 
         return { leadsFound: leads.length, jobsQueued: jobs.length };
       } catch (error) {
-        console.error(`[Sequential Job Worker][lead-search] Error:`, error);
+        console.error(`[Sequential Job Worker][get-campaign-leads] Error:`, error);
         throw error;
       }
     },
@@ -95,11 +95,11 @@ export function startLeadSearchWorker(): Worker {
   );
 
   worker.on("completed", (job) => {
-    console.log(`[Sequential Job Worker][lead-search] Job ${job.id} completed`);
+    console.log(`[Sequential Job Worker][get-campaign-leads] Job ${job.id} completed`);
   });
 
   worker.on("failed", async (job, err) => {
-    console.error(`[Sequential Job Worker][lead-search] Job ${job?.id} failed:`, err);
+    console.error(`[Sequential Job Worker][get-campaign-leads] Job ${job?.id} failed:`, err);
     if (job) {
       const { runId } = job.data;
       await finalizeRun(runId, { total: 0, done: 0, failed: 0 });

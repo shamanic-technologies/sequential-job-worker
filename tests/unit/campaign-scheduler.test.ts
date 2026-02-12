@@ -23,17 +23,15 @@ const mockQueueAdd = vi.fn().mockResolvedValue({ id: "job-123" });
 
 vi.mock("../../src/queues/index.js", () => ({
   getQueues: () => ({
-    "campaign-run": {
-      add: mockQueueAdd,
-    },
-    "brand-upsert": {
+    "create-run": {
       add: mockQueueAdd,
     },
   }),
   QUEUE_NAMES: {
-    CAMPAIGN_RUN: "campaign-run",
-    BRAND_UPSERT: "brand-upsert",
-    LEAD_SEARCH: "lead-search",
+    CREATE_RUN: "create-run",
+    GET_CAMPAIGN_INFO: "get-campaign-info",
+    GET_BRAND_SALES_PROFILE: "get-brand-sales-profile",
+    GET_CAMPAIGN_LEADS: "get-campaign-leads",
     EMAIL_GENERATE: "email-generate",
     EMAIL_SEND: "email-send",
   },
@@ -172,15 +170,15 @@ describe("Campaign Scheduler Logic", () => {
   });
 
   describe("Queue integration", () => {
-    it("should add job to brand-upsert queue", async () => {
+    it("should add job to create-run queue", async () => {
       const queues = getQueues();
 
-      await queues["brand-upsert"].add("test-job", {
+      await queues["create-run"].add("test-job", {
         campaignId: "camp-123",
         clerkOrgId: "org_test",
       });
 
-      expect(queues["brand-upsert"].add).toHaveBeenCalledWith("test-job", {
+      expect(queues["create-run"].add).toHaveBeenCalledWith("test-job", {
         campaignId: "camp-123",
         clerkOrgId: "org_test",
       });

@@ -1,4 +1,4 @@
-import { getQueues, QUEUE_NAMES, BrandUpsertJobData } from "../queues/index.js";
+import { getQueues, QUEUE_NAMES, CreateRunJobData } from "../queues/index.js";
 import { campaignService, leadService, runsService } from "../lib/service-client.js";
 import type { Run, RunWithCosts } from "../lib/runs-client.js";
 
@@ -83,12 +83,12 @@ export function startCampaignScheduler(intervalMs: number = 30000): NodeJS.Timeo
           console.log(`[Sequential Job Worker][scheduler] Queueing campaign ${campaign.id} for org ${campaign.clerkOrgId}`);
 
           const queues = getQueues();
-          await queues[QUEUE_NAMES.BRAND_UPSERT].add(
+          await queues[QUEUE_NAMES.CREATE_RUN].add(
             `campaign-${campaign.id}-${Date.now()}`,
             {
               campaignId: campaign.id,
               clerkOrgId: campaign.clerkOrgId,
-            } as BrandUpsertJobData
+            } as CreateRunJobData
           );
         }
       }
@@ -408,9 +408,9 @@ export async function retriggerCampaignIfNeeded(campaignId: string, clerkOrgId: 
 
     console.log(`[Sequential Job Worker][retrigger] Re-triggering campaign ${campaignId}`);
     const queues = getQueues();
-    await queues[QUEUE_NAMES.BRAND_UPSERT].add(
+    await queues[QUEUE_NAMES.CREATE_RUN].add(
       `campaign-${campaignId}-${Date.now()}`,
-      { campaignId, clerkOrgId } as BrandUpsertJobData
+      { campaignId, clerkOrgId } as CreateRunJobData
     );
   } catch (error) {
     console.error(`[Sequential Job Worker][retrigger] Error re-triggering campaign ${campaignId}:`, error);

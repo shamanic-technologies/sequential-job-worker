@@ -3,10 +3,10 @@ import { getRedis } from "../lib/redis.js";
 
 // Queue names
 export const QUEUE_NAMES = {
-  BRAND_UPSERT: "brand-upsert",
-  BRAND_PROFILE: "brand-profile",
-  LEAD_SEARCH: "lead-search",
-  LEAD_ENRICH: "lead-enrich",
+  CREATE_RUN: "create-run",
+  GET_CAMPAIGN_INFO: "get-campaign-info",
+  GET_BRAND_SALES_PROFILE: "get-brand-sales-profile",
+  GET_CAMPAIGN_LEADS: "get-campaign-leads",
   EMAIL_GENERATE: "email-generate",
   EMAIL_SEND: "email-send",
 } as const;
@@ -17,12 +17,12 @@ let queues: Record<string, Queue> | null = null;
 export function getQueues(): Record<string, Queue> {
   if (!queues) {
     const connection = getRedis();
-    
+
     queues = {
-      [QUEUE_NAMES.BRAND_UPSERT]: new Queue(QUEUE_NAMES.BRAND_UPSERT, { connection }),
-      [QUEUE_NAMES.BRAND_PROFILE]: new Queue(QUEUE_NAMES.BRAND_PROFILE, { connection }),
-      [QUEUE_NAMES.LEAD_SEARCH]: new Queue(QUEUE_NAMES.LEAD_SEARCH, { connection }),
-      [QUEUE_NAMES.LEAD_ENRICH]: new Queue(QUEUE_NAMES.LEAD_ENRICH, { connection }),
+      [QUEUE_NAMES.CREATE_RUN]: new Queue(QUEUE_NAMES.CREATE_RUN, { connection }),
+      [QUEUE_NAMES.GET_CAMPAIGN_INFO]: new Queue(QUEUE_NAMES.GET_CAMPAIGN_INFO, { connection }),
+      [QUEUE_NAMES.GET_BRAND_SALES_PROFILE]: new Queue(QUEUE_NAMES.GET_BRAND_SALES_PROFILE, { connection }),
+      [QUEUE_NAMES.GET_CAMPAIGN_LEADS]: new Queue(QUEUE_NAMES.GET_CAMPAIGN_LEADS, { connection }),
       [QUEUE_NAMES.EMAIL_GENERATE]: new Queue(QUEUE_NAMES.EMAIL_GENERATE, { connection }),
       [QUEUE_NAMES.EMAIL_SEND]: new Queue(QUEUE_NAMES.EMAIL_SEND, { connection }),
     };
@@ -32,18 +32,23 @@ export function getQueues(): Record<string, Queue> {
 
 // Job data types
 
-export interface BrandUpsertJobData {
+export interface CreateRunJobData {
   campaignId: string;
   clerkOrgId: string;
 }
 
-export interface BrandProfileJobData {
+export interface GetCampaignInfoJobData {
+  runId: string;
+  campaignId: string;
+  clerkOrgId: string;
+}
+
+export interface GetBrandSalesProfileJobData {
   campaignId: string;
   runId: string;
   clerkOrgId: string;
   brandUrl: string;
-  brandId?: string; // Existing brandId from campaign (fallback if profile fetch fails)
-  maxLeads?: number | null;
+  brandId: string;
   searchParams: {
     personTitles?: string[];
     organizationLocations?: string[];
@@ -54,7 +59,7 @@ export interface BrandProfileJobData {
   };
 }
 
-export interface LeadSearchJobData {
+export interface GetCampaignLeadsJobData {
   runId: string;
   clerkOrgId: string;
   campaignId: string;
@@ -86,19 +91,6 @@ export interface LeadSearchJobData {
     callToAction?: string;
     additionalContext?: string;
   };
-}
-
-export interface LeadEnrichJobData {
-  runId: string;
-  clerkOrgId: string;
-  apolloPersonId: string;
-  apolloEnrichmentId: string;
-}
-
-export interface CompanyScrapeJobData {
-  runId: string;
-  clerkOrgId: string;
-  companyUrl: string;
 }
 
 export interface EmailGenerateJobData {

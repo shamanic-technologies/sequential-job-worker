@@ -22,6 +22,12 @@ console.log("[Sequential Job Worker]   REDIS_URL:", process.env.REDIS_URL ? "✓
 console.log("[Sequential Job Worker]   CAMPAIGN_SERVICE_URL:", process.env.CAMPAIGN_SERVICE_URL || "✗ MISSING (using default: http://localhost:3003)");
 console.log("[Sequential Job Worker]   BRAND_SERVICE_URL:", process.env.BRAND_SERVICE_URL ? "✓ configured" : "✗ MISSING");
 
+// Fail fast if required env vars are missing — prevents crash-loop restarts
+if (!process.env.REDIS_URL) {
+  console.error("[Sequential Job Worker] === FATAL: REDIS_URL is required but not set ===");
+  process.exit(1);
+}
+
 let schedulerInterval: NodeJS.Timeout;
 let workers: ReturnType<typeof startBrandUpsertWorker>[] = [];
 

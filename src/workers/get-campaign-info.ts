@@ -1,6 +1,6 @@
 import { Worker, Job } from "bullmq";
 import { getRedis } from "../lib/redis.js";
-import { getQueues, QUEUE_NAMES, GetCampaignInfoJobData, GetBrandSalesProfileJobData } from "../queues/index.js";
+import { getQueues, QUEUE_NAMES, GetCampaignInfoJobData, GetBrandSalesProfileJobData, EndRunJobData } from "../queues/index.js";
 import { campaignService } from "../lib/service-client.js";
 
 interface CampaignDetails {
@@ -98,8 +98,16 @@ export function startGetCampaignInfoWorker(): Worker {
     console.log(`[Sequential Job Worker][get-campaign-info] Job ${job.id} completed`);
   });
 
-  worker.on("failed", (job, err) => {
+  worker.on("failed", async (job, err) => {
     console.error(`[Sequential Job Worker][get-campaign-info] Job ${job?.id} failed:`, err);
+    if (job) {
+      const { runId, campaignId, clerkOrgId } = job.data;
+      const queues = getQueues();
+      await queues[QUEUE_NAMES.END_RUN].add(
+        `end-${runId}`,
+        { runId, campaignId, clerkOrgId, stats: { total: 0, done: 0, failed: 0 } } as EndRunJobData
+      );
+    }
   });
 
   console.log(`[Sequential Job Worker][get-campaign-info] Worker started on queue: ${QUEUE_NAMES.GET_CAMPAIGN_INFO}`);

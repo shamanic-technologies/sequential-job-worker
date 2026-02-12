@@ -1,8 +1,8 @@
 import { Worker, Job } from "bullmq";
 import { getRedis } from "../lib/redis.js";
-import { getQueues, QUEUE_NAMES, GetCampaignLeadsJobData, EmailGenerateJobData } from "../queues/index.js";
+import { getQueues, QUEUE_NAMES, GetCampaignLeadsJobData, EmailGenerateJobData, EndRunJobData } from "../queues/index.js";
 import { leadService } from "../lib/service-client.js";
-import { initRunTracking, finalizeRun } from "../lib/run-tracker.js";
+import { initRunTracking } from "../lib/run-tracker.js";
 
 interface BufferLead {
   email: string;
@@ -78,8 +78,12 @@ export function startGetCampaignLeadsWorker(): Worker {
           await queues[QUEUE_NAMES.EMAIL_GENERATE].addBulk(jobs);
           console.log(`[Sequential Job Worker][get-campaign-leads] Queued ${jobs.length} email generation jobs`);
         } else {
-          console.log(`[Sequential Job Worker][get-campaign-leads] No leads to process, finalizing run`);
-          await finalizeRun(runId, { total: 0, done: 0, failed: 0 });
+          console.log(`[Sequential Job Worker][get-campaign-leads] No leads to process, ending run`);
+          const queues2 = getQueues();
+          await queues2[QUEUE_NAMES.END_RUN].add(
+            `end-${runId}`,
+            { runId, campaignId, clerkOrgId, stats: { total: 0, done: 0, failed: 0 } } as EndRunJobData
+          );
         }
 
         return { leadsFound: leads.length, jobsQueued: jobs.length };
@@ -101,8 +105,12 @@ export function startGetCampaignLeadsWorker(): Worker {
   worker.on("failed", async (job, err) => {
     console.error(`[Sequential Job Worker][get-campaign-leads] Job ${job?.id} failed:`, err);
     if (job) {
-      const { runId } = job.data;
-      await finalizeRun(runId, { total: 0, done: 0, failed: 0 });
+      const { runId, campaignId, clerkOrgId } = job.data;
+      const queues = getQueues();
+      await queues[QUEUE_NAMES.END_RUN].add(
+        `end-${runId}`,
+        { runId, campaignId, clerkOrgId, stats: { total: 0, done: 0, failed: 0 } } as EndRunJobData
+      );
     }
   });
 

@@ -9,6 +9,7 @@ export const QUEUE_NAMES = {
   GET_CAMPAIGN_LEADS: "get-campaign-leads",
   EMAIL_GENERATE: "email-generate",
   EMAIL_SEND: "email-send",
+  END_RUN: "end-run",
 } as const;
 
 // Queue instances (lazy initialized)
@@ -25,6 +26,7 @@ export function getQueues(): Record<string, Queue> {
       [QUEUE_NAMES.GET_CAMPAIGN_LEADS]: new Queue(QUEUE_NAMES.GET_CAMPAIGN_LEADS, { connection }),
       [QUEUE_NAMES.EMAIL_GENERATE]: new Queue(QUEUE_NAMES.EMAIL_GENERATE, { connection }),
       [QUEUE_NAMES.EMAIL_SEND]: new Queue(QUEUE_NAMES.EMAIL_SEND, { connection }),
+      [QUEUE_NAMES.END_RUN]: new Queue(QUEUE_NAMES.END_RUN, { connection }),
     };
   }
   return queues;
@@ -143,4 +145,11 @@ export interface EmailSendJobData {
   recipientCompany: string;
   subject: string;
   bodyHtml: string;
+}
+
+export interface EndRunJobData {
+  runId: string;
+  campaignId: string;
+  clerkOrgId: string;
+  stats: { total: number; done: number; failed: number };
 }

@@ -3,7 +3,7 @@ import { describe, it, expect } from "vitest";
 describe("Service client", () => {
   it("should define service URLs", () => {
     const services = {
-      emailSendingService: "https://email-sending.mcpfactory.org",
+      emailGatewayService: "https://email-gateway.mcpfactory.org",
       companyService: "https://company.mcpfactory.org",
       leadService: "https://lead.mcpfactory.org",
     };

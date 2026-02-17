@@ -2,9 +2,9 @@ import { describe, it, expect } from "vitest";
 
 /**
  * Regression test: email-send worker must validate the response payload
- * from the email-sending-service, not just the HTTP status code.
+ * from the email-gateway, not just the HTTP status code.
  *
- * The email-sending-service can return HTTP 200 with { success: false }
+ * The email-gateway can return HTTP 200 with { success: false }
  * when the downstream provider (Instantly) rejects the send. Without
  * checking `success`, the worker would log "Sent email" and count it
  * as a success — even though nothing was actually delivered.
@@ -20,13 +20,13 @@ interface SendResult {
 function validateSendResult(result: SendResult): void {
   if (!result.success) {
     throw new Error(
-      `Email sending service returned failure: ${result.error || "unknown error"}`
+      `Email gateway returned failure: ${result.error || "unknown error"}`
     );
   }
 }
 
 describe("Email send response validation", () => {
-  it("should throw when email-sending-service returns success=false", () => {
+  it("should throw when email-gateway returns success=false", () => {
     const failedResult: SendResult = {
       success: false,
       provider: "broadcast",
@@ -34,7 +34,7 @@ describe("Email send response validation", () => {
     };
 
     expect(() => validateSendResult(failedResult)).toThrow(
-      "Email sending service returned failure: Instantly campaign not found"
+      "Email gateway returned failure: Instantly campaign not found"
     );
   });
 
@@ -45,11 +45,11 @@ describe("Email send response validation", () => {
     };
 
     expect(() => validateSendResult(failedResult)).toThrow(
-      "Email sending service returned failure: unknown error"
+      "Email gateway returned failure: unknown error"
     );
   });
 
-  it("should not throw when email-sending-service returns success=true", () => {
+  it("should not throw when email-gateway returns success=true", () => {
     const successResult: SendResult = {
       success: true,
       messageId: "msg-123",

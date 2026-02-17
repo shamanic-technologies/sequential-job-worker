@@ -2,7 +2,7 @@
  * Generic service client for calling other microservices
  *
  * Each service has its own API key env var:
- * - EMAIL_SENDING_SERVICE_API_KEY for email-sending-service
+ * - EMAIL_GATEWAY_SERVICE_API_KEY for email-gateway-service
  * - BRAND_SERVICE_API_KEY for brand-service
  * - CAMPAIGN_SERVICE_API_KEY for campaign-service
  * - RUNS_SERVICE_API_KEY for runs-service
@@ -193,9 +193,9 @@ export const emailGenerationService = {
   },
 };
 
-export const emailSendingService = {
-  url: process.env.EMAIL_SENDING_SERVICE_URL || "https://email-sending.mcpfactory.org",
-  apiKey: process.env.EMAIL_SENDING_SERVICE_API_KEY,
+export const emailGatewayService = {
+  url: process.env.EMAIL_GATEWAY_SERVICE_URL || "https://email-gateway.mcpfactory.org",
+  apiKey: process.env.EMAIL_GATEWAY_SERVICE_API_KEY,
 
   async send(data: {
     type: "transactional" | "broadcast";

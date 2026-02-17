@@ -1,7 +1,7 @@
 import { Worker, Job } from "bullmq";
 import { getRedis } from "../lib/redis.js";
 import { getQueues, QUEUE_NAMES, EmailSendJobData, EndRunJobData } from "../queues/index.js";
-import { emailSendingService } from "../lib/service-client.js";
+import { emailGatewayService } from "../lib/service-client.js";
 import { markJobDone } from "../lib/run-tracker.js";
 
 interface SendResult {
@@ -14,7 +14,7 @@ interface SendResult {
 /**
  * Email Send Worker
  *
- * Sends generated emails via EmailSendingService
+ * Sends generated emails via EmailGatewayService
  */
 export function startEmailSendWorker(): Worker {
   const connection = getRedis();
@@ -32,7 +32,7 @@ export function startEmailSendWorker(): Worker {
       console.log(`[Sequential Job Worker][email-send] Sending email to ${toEmail}`);
 
       try {
-        const result = await emailSendingService.send({
+        const result = await emailGatewayService.send({
           type: "broadcast",
           appId: "mcpfactory",
           clerkOrgId,
@@ -53,7 +53,7 @@ export function startEmailSendWorker(): Worker {
         }) as SendResult;
 
         if (!result.success) {
-          throw new Error(`Email sending service returned failure: ${result.error || "unknown error"}`);
+          throw new Error(`Email gateway returned failure: ${result.error || "unknown error"}`);
         }
 
         console.log(`[Sequential Job Worker][email-send] Sent email to ${toEmail} (messageId=${result.messageId}, provider=${result.provider})`);

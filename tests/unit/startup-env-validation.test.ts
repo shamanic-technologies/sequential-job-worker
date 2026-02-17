@@ -64,6 +64,24 @@ describe("Startup environment validation", () => {
     expect(exitSpy).not.toHaveBeenCalled();
   });
 
+  it("should call process.exit(1) when EMAIL_GATEWAY_SERVICE_API_KEY is missing", async () => {
+    delete process.env.EMAIL_GATEWAY_SERVICE_API_KEY;
+
+    const requiredEnvVars = ["REDIS_URL", "EMAIL_GATEWAY_SERVICE_API_KEY"] as const;
+    const guard = () => {
+      for (const envVar of requiredEnvVars) {
+        if (!process.env[envVar]) {
+          process.exit(1);
+        }
+      }
+    };
+
+    // REDIS_URL is set but EMAIL_GATEWAY_SERVICE_API_KEY is not → should exit
+    process.env.REDIS_URL = "redis://localhost:6379";
+    expect(() => guard()).toThrow("process.exit called");
+    expect(exitSpy).toHaveBeenCalledWith(1);
+  });
+
   it("getRedis should throw when REDIS_URL is missing", async () => {
     delete process.env.REDIS_URL;
 

@@ -20,12 +20,12 @@ describe("Service client", () => {
 });
 
 /**
- * Regression test: env var rename from EMAIL_SENDING_SERVICE_* to
- * EMAIL_GATEWAY_SERVICE_* must fall back to the old names so
- * deployments that haven't updated their env vars yet don't break
- * with 401 Unauthorized.
+ * Regression test: emailGatewayService.apiKey must reflect
+ * EMAIL_GATEWAY_SERVICE_API_KEY — the old EMAIL_SENDING_SERVICE_*
+ * names are dead. If the var is missing, startup should crash
+ * (tested in startup.test.ts).
  */
-describe("Email gateway env var fallback", () => {
+describe("Email gateway env var", () => {
   const originalEnv = { ...process.env };
 
   afterEach(() => {
@@ -33,35 +33,17 @@ describe("Email gateway env var fallback", () => {
     vi.resetModules();
   });
 
-  it("should use new EMAIL_GATEWAY_SERVICE_API_KEY when set", async () => {
-    process.env.EMAIL_GATEWAY_SERVICE_API_KEY = "new-key";
-    delete process.env.EMAIL_SENDING_SERVICE_API_KEY;
+  it("should use EMAIL_GATEWAY_SERVICE_API_KEY", async () => {
+    process.env.EMAIL_GATEWAY_SERVICE_API_KEY = "gw-key";
 
     const { emailGatewayService } = await import("../../src/lib/service-client.js");
-    expect(emailGatewayService.apiKey).toBe("new-key");
+    expect(emailGatewayService.apiKey).toBe("gw-key");
   });
 
-  it("should fall back to old EMAIL_SENDING_SERVICE_API_KEY when new var is not set", async () => {
+  it("should be undefined when EMAIL_GATEWAY_SERVICE_API_KEY is not set", async () => {
     delete process.env.EMAIL_GATEWAY_SERVICE_API_KEY;
-    process.env.EMAIL_SENDING_SERVICE_API_KEY = "old-key";
 
     const { emailGatewayService } = await import("../../src/lib/service-client.js");
-    expect(emailGatewayService.apiKey).toBe("old-key");
-  });
-
-  it("should fall back to old EMAIL_SENDING_SERVICE_URL when new var is not set", async () => {
-    delete process.env.EMAIL_GATEWAY_SERVICE_URL;
-    process.env.EMAIL_SENDING_SERVICE_URL = "https://old-email-sending.example.com";
-
-    const { emailGatewayService } = await import("../../src/lib/service-client.js");
-    expect(emailGatewayService.url).toBe("https://old-email-sending.example.com");
-  });
-
-  it("should prefer new EMAIL_GATEWAY_SERVICE_URL over old name", async () => {
-    process.env.EMAIL_GATEWAY_SERVICE_URL = "https://new-gateway.example.com";
-    process.env.EMAIL_SENDING_SERVICE_URL = "https://old-sending.example.com";
-
-    const { emailGatewayService } = await import("../../src/lib/service-client.js");
-    expect(emailGatewayService.url).toBe("https://new-gateway.example.com");
+    expect(emailGatewayService.apiKey).toBeUndefined();
   });
 });

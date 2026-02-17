@@ -25,9 +25,12 @@ console.log("[Sequential Job Worker]   CAMPAIGN_SERVICE_URL:", process.env.CAMPA
 console.log("[Sequential Job Worker]   BRAND_SERVICE_URL:", process.env.BRAND_SERVICE_URL ? "✓ configured" : "✗ MISSING");
 
 // Fail fast if required env vars are missing — prevents crash-loop restarts
-if (!process.env.REDIS_URL) {
-  console.error("[Sequential Job Worker] === FATAL: REDIS_URL is required but not set ===");
-  process.exit(1);
+const requiredEnvVars = ["REDIS_URL", "EMAIL_GATEWAY_SERVICE_API_KEY"] as const;
+for (const envVar of requiredEnvVars) {
+  if (!process.env[envVar]) {
+    console.error(`[Sequential Job Worker] === FATAL: ${envVar} is required but not set ===`);
+    process.exit(1);
+  }
 }
 
 let schedulerInterval: NodeJS.Timeout;

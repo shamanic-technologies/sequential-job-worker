@@ -194,8 +194,8 @@ export const emailGenerationService = {
 };
 
 export const emailGatewayService = {
-  url: process.env.EMAIL_GATEWAY_SERVICE_URL || "https://email-gateway.mcpfactory.org",
-  apiKey: process.env.EMAIL_GATEWAY_SERVICE_API_KEY,
+  url: process.env.EMAIL_GATEWAY_SERVICE_URL || process.env.EMAIL_SENDING_SERVICE_URL || "https://email-gateway.mcpfactory.org",
+  apiKey: process.env.EMAIL_GATEWAY_SERVICE_API_KEY || process.env.EMAIL_SENDING_SERVICE_API_KEY,
 
   async send(data: {
     type: "transactional" | "broadcast";

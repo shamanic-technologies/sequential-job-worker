@@ -37,6 +37,8 @@ interface GetBrandSalesProfileJobData {
   clerkOrgId: string;
   brandUrl: string;
   brandId: string;
+  appId: string;
+  clerkUserId?: string;
   searchParams: Record<string, unknown>;
 }
 
@@ -65,15 +67,15 @@ interface ClientData {
  */
 async function resolveBrandProfile(
   jobData: GetBrandSalesProfileJobData,
-  getSalesProfile: (clerkOrgId: string, brandUrl: string, keyType: string, runId: string) => Promise<SalesProfileResponse>,
+  getSalesProfile: (clerkOrgId: string, brandUrl: string, keyType: string, runId: string, appId?: string, clerkUserId?: string) => Promise<SalesProfileResponse>,
 ): Promise<{ brandId: string; clientData: ClientData }> {
-  const { clerkOrgId, brandUrl, brandId, runId } = jobData;
+  const { clerkOrgId, brandUrl, brandId, runId, appId, clerkUserId } = jobData;
   const brandDomain = new URL(brandUrl).hostname.replace(/^www\./, "");
 
   let clientData: ClientData = { companyName: brandDomain, brandUrl };
 
   try {
-    const profileResult = await getSalesProfile(clerkOrgId, brandUrl, "byok", runId);
+    const profileResult = await getSalesProfile(clerkOrgId, brandUrl, "byok", runId, appId, clerkUserId);
 
     if (profileResult?.profile) {
       const p = profileResult.profile;
@@ -106,6 +108,8 @@ describe("Get brand sales profile logic", () => {
     clerkOrgId: "org_abc",
     brandUrl: "https://growthservice.org",
     brandId: "brand-from-api",
+    appId: "mcpfactory",
+    clerkUserId: "user_xyz",
     searchParams: { personTitles: ["VP Marketing"] },
   };
 
@@ -212,5 +216,55 @@ describe("Get brand sales profile logic", () => {
     // Should use the brandId from job data, NOT from profile response
     expect(result.brandId).toBe("brand-from-api");
     expect(result.clientData.companyName).toBe("Acme Corp");
+  });
+
+  it("should pass appId and clerkUserId to getSalesProfile", async () => {
+    const getSalesProfile = vi.fn().mockResolvedValue({
+      cached: true,
+      brandId: "brand-from-service",
+      profile: {
+        companyName: "Growth Service",
+        valueProposition: null,
+        companyOverview: null,
+        targetAudience: null,
+        customerPainPoints: [],
+        keyFeatures: [],
+        productDifferentiators: [],
+        competitors: [],
+        socialProof: { caseStudies: [], testimonials: [], results: [] },
+        callToAction: null,
+        additionalContext: null,
+      },
+    } satisfies SalesProfileResponse);
+
+    await resolveBrandProfile(baseJobData, getSalesProfile);
+
+    expect(getSalesProfile).toHaveBeenCalledWith(
+      "org_abc",
+      "https://growthservice.org",
+      "byok",
+      "run-456",
+      "mcpfactory",
+      "user_xyz",
+    );
+  });
+
+  it("should pass appId and undefined clerkUserId when not provided", async () => {
+    const getSalesProfile = vi.fn().mockResolvedValue({
+      cached: true,
+      brandId: "brand-from-service",
+    } satisfies SalesProfileResponse);
+
+    const jobDataNoUser = { ...baseJobData, clerkUserId: undefined };
+    await resolveBrandProfile(jobDataNoUser, getSalesProfile);
+
+    expect(getSalesProfile).toHaveBeenCalledWith(
+      "org_abc",
+      "https://growthservice.org",
+      "byok",
+      "run-456",
+      "mcpfactory",
+      undefined,
+    );
   });
 });

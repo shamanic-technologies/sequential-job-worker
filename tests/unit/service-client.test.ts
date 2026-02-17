@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach, type MockInstance } from "vitest";
 
 describe("Service client", () => {
   it("should define service URLs", () => {
@@ -63,5 +63,62 @@ describe("Email gateway env var fallback", () => {
 
     const { emailGatewayService } = await import("../../src/lib/service-client.js");
     expect(emailGatewayService.url).toBe("https://new-gateway.example.com");
+  });
+});
+
+/**
+ * Regression test: brand-service /sales-profile now requires appId and
+ * clerkUserId. Without these fields the call returns 400:
+ *   {"fieldErrors":{"appId":["expected string, received undefined"],
+ *                   "clerkUserId":["expected string, received undefined"]}}
+ */
+describe("brandService.getSalesProfile request body", () => {
+  let fetchSpy: MockInstance;
+  const originalEnv = { ...process.env };
+
+  beforeEach(() => {
+    fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ cached: true, brandId: "b1" }), { status: 200 }),
+    );
+    process.env.BRAND_SERVICE_URL = "https://brand.test";
+    process.env.BRAND_SERVICE_API_KEY = "test-key";
+  });
+
+  afterEach(() => {
+    fetchSpy.mockRestore();
+    process.env = { ...originalEnv };
+    vi.resetModules();
+  });
+
+  it("should include appId and clerkUserId in the request body", async () => {
+    const { brandService } = await import("../../src/lib/service-client.js");
+
+    await brandService.getSalesProfile(
+      "org_abc",
+      "https://example.com",
+      "byok",
+      "run-1",
+      "my-app",
+      "user_123",
+    );
+
+    expect(fetchSpy).toHaveBeenCalledOnce();
+    const [, opts] = fetchSpy.mock.calls[0];
+    const body = JSON.parse(opts.body as string);
+    expect(body.appId).toBe("my-app");
+    expect(body.clerkUserId).toBe("user_123");
+    expect(body.clerkOrgId).toBe("org_abc");
+    expect(body.url).toBe("https://example.com");
+  });
+
+  it("should default appId to 'mcpfactory' and clerkUserId to 'system' when not provided", async () => {
+    const { brandService } = await import("../../src/lib/service-client.js");
+
+    await brandService.getSalesProfile("org_abc", "https://example.com");
+
+    const [, opts] = fetchSpy.mock.calls[0];
+    const body = JSON.parse(opts.body as string);
+    expect(body.appId).toBe("mcpfactory");
+    expect(body.clerkUserId).toBe("system");
   });
 });

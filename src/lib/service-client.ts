@@ -253,13 +253,25 @@ export const brandService = {
    * @param clerkOrgId - Clerk organization ID
    * @param brandUrl - Brand website URL
    * @param keyType - "byok" for user's key, "platform" for MCP Factory's key
+   * @param parentRunId - Optional parent run ID for cost tracking
+   * @param appId - App identifier (required by brand-service)
+   * @param clerkUserId - Clerk user ID (required by brand-service)
    */
-  async getSalesProfile(clerkOrgId: string, brandUrl: string, keyType: "byok" | "platform" = "byok", parentRunId?: string) {
+  async getSalesProfile(
+    clerkOrgId: string,
+    brandUrl: string,
+    keyType: "byok" | "platform" = "byok",
+    parentRunId?: string,
+    appId?: string,
+    clerkUserId?: string,
+  ) {
     return callService(this.url, "/sales-profile", {
       method: "POST",
       body: {
+        appId: appId || "mcpfactory",
         clerkOrgId,
         url: brandUrl,
+        clerkUserId: clerkUserId || "system",
         keyType,
         ...(parentRunId && { parentRunId }),
       },

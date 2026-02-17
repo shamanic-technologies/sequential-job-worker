@@ -38,7 +38,7 @@ export function startGetBrandSalesProfileWorker(): Worker {
   const worker = new Worker<GetBrandSalesProfileJobData>(
     QUEUE_NAMES.GET_BRAND_SALES_PROFILE,
     async (job: Job<GetBrandSalesProfileJobData>) => {
-      const { campaignId, runId, clerkOrgId, brandUrl, brandId, searchParams } = job.data;
+      const { campaignId, runId, clerkOrgId, brandUrl, brandId, appId, clerkUserId, searchParams } = job.data;
 
       const brandDomain = new URL(brandUrl).hostname.replace(/^www\./, '');
       console.log(`[Sequential Job Worker][get-brand-sales-profile] Fetching profile for ${brandDomain} (${brandUrl})`);
@@ -51,7 +51,9 @@ export function startGetBrandSalesProfileWorker(): Worker {
             clerkOrgId,
             brandUrl,
             "byok",
-            runId
+            runId,
+            appId,
+            clerkUserId,
           ) as SalesProfileResponse;
 
           if (profileResult?.profile) {

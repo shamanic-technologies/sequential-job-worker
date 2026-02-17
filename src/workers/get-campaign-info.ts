@@ -10,6 +10,8 @@ interface CampaignDetails {
   brandDomain?: string;
   brandName?: string;
   brandUrl?: string;
+  appId?: string;
+  createdByUserId?: string;
   personTitles?: string[];
   organizationLocations?: string[];
   qOrganizationKeywordTags?: string[];
@@ -72,6 +74,8 @@ export function startGetCampaignInfoWorker(): Worker {
             clerkOrgId,
             brandUrl,
             brandId,
+            appId: campaign.appId || "mcpfactory",
+            clerkUserId: campaign.createdByUserId || undefined,
             searchParams,
           } as GetBrandSalesProfileJobData
         );

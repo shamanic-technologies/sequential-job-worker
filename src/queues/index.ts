@@ -51,6 +51,8 @@ export interface GetBrandSalesProfileJobData {
   clerkOrgId: string;
   brandUrl: string;
   brandId: string;
+  appId: string;
+  clerkUserId?: string;
   searchParams: {
     personTitles?: string[];
     organizationLocations?: string[];
